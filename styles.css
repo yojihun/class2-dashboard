@@ -1070,3 +1070,512 @@ body.management-screen main {
     grid-template-columns: 1fr;
   }
 }
+
+/* Dashboard v2: fixed TV message board + rotating content stage. */
+.mobile-only {
+  display: none;
+}
+
+.dashboard-shell-hero {
+  min-height: auto;
+  padding: 18px 28px 12px;
+}
+
+.dashboard-hero-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 auto;
+  align-items: center;
+}
+
+.dashboard-tabs {
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.view-tab,
+.management-pill {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  padding: 7px 17px;
+  background: var(--surface-1);
+  color: var(--ink-muted);
+  font-size: 0.94rem;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.view-tab:hover,
+.view-tab:focus-visible,
+.management-pill:hover,
+.management-pill:focus-visible,
+.view-tab.is-active {
+  border-color: var(--primary-line);
+  background: var(--surface-3);
+  color: var(--primary);
+  outline: none;
+}
+
+.dashboard-stage {
+  display: grid;
+  grid-template-rows: 0.9fr 2.5fr;
+  gap: 12px;
+}
+
+.fixed-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.message-panel,
+.quote-panel {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.message-panel h2 {
+  font-size: 2.2rem;
+}
+
+.message-panel p:last-child,
+.quote-panel blockquote {
+  margin: 12px 0 0;
+  color: var(--ink-muted);
+  font-size: 1.32rem;
+  font-weight: 620;
+  line-height: 1.38;
+}
+
+.quote-panel blockquote {
+  color: var(--amber);
+}
+
+.view-stage {
+  min-height: 0;
+  display: grid;
+}
+
+.view-panel {
+  min-height: 0;
+  display: none;
+  overflow: hidden;
+}
+
+.view-panel.is-active {
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-board {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.schedule-day {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.schedule-day.is-today {
+  border-color: var(--primary-line);
+  background: var(--primary-soft);
+}
+
+.schedule-day-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--hairline);
+  padding: 9px 10px;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.schedule-day-head strong {
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-pill);
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.schedule-day ul {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  margin: 0;
+  padding: 9px;
+  list-style: none;
+}
+
+.schedule-day li {
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-sm);
+  padding: 7px 8px;
+  background: var(--surface-1);
+}
+
+.schedule-day li span {
+  color: var(--primary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.schedule-day li strong {
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.28;
+}
+
+.schedule-board.is-dense .schedule-day ul {
+  gap: 4px;
+  padding: 7px;
+}
+
+.schedule-board.is-dense .schedule-day li {
+  padding: 5px 6px;
+}
+
+.schedule-board.is-dense .schedule-day li strong {
+  font-size: 0.74rem;
+  line-height: 1.18;
+}
+
+.duty-cleaning-layout {
+  min-height: 0;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 2fr);
+  gap: 12px;
+}
+
+.duty-label {
+  margin: 0;
+  color: var(--amber);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.duty-cleaning-layout .assignment-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-content: start;
+}
+
+.role-board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.role-board .role-item {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 6px;
+  padding: 12px;
+}
+
+.role-board .role-item span {
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.role-board .role-item strong {
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.role-board .role-item p {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--primary-line);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 760;
+}
+
+.classroom-map {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  grid-template-rows: auto repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  overflow: hidden;
+}
+
+.classroom-map .teacher-desk {
+  grid-column: 2;
+}
+
+.classroom-map .door-zone {
+  grid-column: 3;
+  grid-row: 2 / 5;
+  writing-mode: vertical-rl;
+}
+
+.seat-row {
+  grid-column: 2;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.classroom-map .seat,
+.classroom-map .fixture {
+  min-height: 0;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.classroom-map .fixture {
+  background: var(--surface-3);
+}
+
+.classroom-map .seat span {
+  color: var(--ink);
+  font-size: 1.14rem;
+  font-weight: 800;
+}
+
+.compact-links {
+  display: none;
+}
+
+@media (min-width: 921px) {
+  body.tv-screen .dashboard-shell-hero {
+    height: 22vh;
+  }
+
+  body.tv-screen .dashboard-stage {
+    width: min(98vw, 1920px);
+    height: 73vh;
+    margin-top: 6px;
+  }
+
+  body.tv-screen .hero-text {
+    max-width: 920px;
+  }
+
+  body.tv-screen footer {
+    display: none;
+  }
+}
+
+@media (max-width: 920px) {
+  .mobile-only {
+    display: block;
+  }
+
+  body.tv-screen .dashboard-shell-hero {
+    padding: 14px 16px 18px;
+  }
+
+  .dashboard-tabs {
+    justify-content: flex-start;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .view-tab,
+  .management-pill {
+    min-height: 34px;
+    padding: 6px 12px;
+    font-size: 0.84rem;
+  }
+
+  body.tv-screen .dashboard-stage {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mobile-teacher-card {
+    display: block;
+  }
+
+  .compact-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .compact-links a {
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-pill);
+    padding: 7px 11px;
+    background: var(--surface-1);
+    color: var(--ink-muted);
+    font-size: 0.84rem;
+    font-weight: 750;
+  }
+
+  .fixed-board,
+  .schedule-board,
+  .duty-cleaning-layout,
+  .role-board {
+    grid-template-columns: 1fr;
+  }
+
+  .view-stage {
+    display: grid;
+    gap: 12px;
+  }
+
+  .view-panel,
+  .view-panel.is-active {
+    display: flex;
+    overflow: visible;
+  }
+
+  .schedule-day,
+  .view-panel {
+    overflow: visible;
+  }
+
+  .duty-cleaning-layout .assignment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .classroom-map {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .classroom-map .teacher-desk,
+  .classroom-map .door-zone,
+  .seat-row {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .classroom-map .door-zone {
+    writing-mode: horizontal-tb;
+  }
+
+  .seat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .message-panel h2 {
+    font-size: 1.45rem;
+  }
+
+  .message-panel p:last-child,
+  .quote-panel blockquote {
+    font-size: 1.02rem;
+  }
+
+  .duty-cleaning-layout .assignment-grid,
+  .seat-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 921px) {
+  body.tv-screen .dashboard-stage {
+    display: grid;
+    grid-template-rows: 0.9fr 2.5fr;
+    gap: 12px;
+  }
+
+  body.tv-screen .view-stage {
+    min-height: 0;
+    display: grid;
+  }
+}
+
+.duty-pair {
+  align-items: center;
+}
+
+.duty-pair span {
+  width: 72px;
+  height: 72px;
+  min-width: 72px;
+  min-height: 72px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 920px) {
+  body.tv-screen h1 {
+    font-size: 2.35rem;
+    line-height: 1.04;
+  }
+
+  body.tv-screen .hero-text {
+    font-size: 0.98rem;
+  }
+
+  body.tv-screen .mobile-teacher-card.teacher-card {
+    display: block;
+  }
+
+  body.tv-screen .fixed-board .panel {
+    min-height: auto;
+  }
+
+  body.tv-screen .message-panel,
+  body.tv-screen .quote-panel {
+    display: flex;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 620px) {
+  body.tv-screen h1 {
+    font-size: 2rem;
+  }
+
+  body.tv-screen .dashboard-shell-hero {
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 920px) {
+  body.tv-screen .dashboard-stage {
+    grid-template-rows: none;
+    align-content: start;
+  }
+
+  body.tv-screen .compact-links {
+    align-items: flex-start;
+  }
+}

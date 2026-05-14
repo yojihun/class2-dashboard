@@ -1,8 +1,19 @@
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 const DAY_NAMES_LONG = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
+const VIEW_ORDER = ["schedule", "duties", "roles", "seating"];
 
 const students = ["고성민", "고희경", "권율", "김규리", "김선민", "박지성", "변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민", "전효민", "조예지", "최승우", "최영민", "한병민", "황수미"];
 const cleaningAssignments = ["쓸기1", "쓸기2", "쓸기3", "바닦1", "바닦2", "휴지통1", "휴지통2", "닦기1", "닦기2", "닦기3", "닦기4", "교탁정리", "꿈담카페1", "꿈담카페2", "꿈담카페3", "2-2계단1", "2-2계단2", "2-2계단3"];
+const individualRoles = [
+  ["학급 회장", "고성민"], ["학급 부회장", "고희경"], ["출석 확인", "권율"], ["알림장", "김규리"], ["과제 리마인더", "김선민"], ["기자재 점검", "박지성"],
+  ["칠판 관리", "변지현"], ["분리수거", "여서정"], ["학습 분위기", "유리한"], ["문단속", "윤규태"], ["환기", "이윤재"], ["사물함 점검", "이현민"],
+  ["급식 안내", "전효민"], ["게시판", "조예지"], ["체육 준비", "최승우"], ["도서 관리", "최영민"], ["행사 기록", "한병민"], ["칭찬 릴레이", "황수미"]
+];
+const seatingRows = [
+  ["고성민", "고희경", "권율", "김규리", "김선민", "박지성"],
+  ["변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민"],
+  ["전효민", "조예지", "최승우", "최영민", "한병민", "황수미"]
+];
 
 const fallbackSchedules = {
   1: [["08:05", "주번 조회"], ["1교시", "자치활동"]],
@@ -72,6 +83,10 @@ function shortName(name) {
   return name.slice(1);
 }
 
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+}
+
 function renderLive() {
   const today = getKoreaToday();
   document.querySelector("#live-date").textContent = today.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" });
@@ -82,39 +97,49 @@ async function renderSchedule() {
   const state = await loadState();
   const plan = resolveDashboardPlan(state);
   const today = getKoreaToday().getDay();
-  const todayList = document.querySelector("#today-list");
-  const upcomingList = document.querySelector("#upcoming-list");
   const homeroomTasks = plan ? plan.tasks.filter((t) => t.homeroom) : [];
-  const todayTasks = homeroomTasks.filter((t) => t.dayIndex === today);
+  const board = document.querySelector("#schedule-board");
 
-  if (todayTasks.length) {
-    todayList.innerHTML = todayTasks.map((task, idx) => `<li class="${idx === 0 ? "is-highlight" : ""}"><span class="task-time">${DAY_NAMES_LONG[task.dayIndex] || `${task.dayIndex}일`}</span><strong>${task.text}</strong></li>`).join("");
-  } else {
-    const fallback = fallbackSchedules[today] || [["오늘", "등록된 일정 없음"]];
-    todayList.innerHTML = fallback.map((f, idx) => `<li class="${idx === 0 ? "is-highlight" : ""}"><span class="task-time">${f[0]}</span><strong>${f[1]}</strong></li>`).join("");
-  }
+  board.innerHTML = [1, 2, 3, 4, 5].map((dayIndex) => {
+    const tasks = homeroomTasks.filter((task) => task.dayIndex === dayIndex);
+    const rows = tasks.length ? tasks : (dayIndex === today ? fallbackSchedules[today] || [] : []);
+    const isToday = dayIndex === today;
+    const empty = !rows.length;
 
-  if (homeroomTasks.length) {
-    upcomingList.innerHTML = homeroomTasks
-      .filter((t) => t.dayIndex >= today)
-      .sort((a, b) => a.dayIndex - b.dayIndex)
-      .map((task) => `<li><span class="task-time">${DAY_NAMES_LONG[task.dayIndex] || `${task.dayIndex}일`}</span><strong>${task.text}</strong></li>`)
-      .join("");
-  } else {
-    upcomingList.innerHTML = `<li><strong>아직 저장된 반영 일정이 없습니다. 관리 페이지에서 체크 후 저장하세요.</strong></li>`;
-  }
+    return `
+      <section class="schedule-day ${isToday ? "is-today" : ""}">
+        <div class="schedule-day-head"><span>${DAY_NAMES_LONG[dayIndex]}</span><strong>${rows.length}</strong></div>
+        <ul>
+          ${empty ? `<li class="empty-day">추가 일정 없음</li>` : rows.map((task) => {
+            const text = Array.isArray(task) ? task[1] : task.text;
+            const time = Array.isArray(task) ? task[0] : DAY_NAMES_LONG[task.dayIndex];
+            return `<li><span>${escapeHtml(time)}</span><strong>${escapeHtml(text)}</strong></li>`;
+          }).join("")}
+        </ul>
+      </section>`;
+  }).join("");
+
+  const maxDayCount = Math.max(...[1, 2, 3, 4, 5].map((dayIndex) => homeroomTasks.filter((task) => task.dayIndex === dayIndex).length), 0);
+  board.classList.toggle("is-dense", maxDayCount > 9);
 }
 
-function renderDutyAndCleaning() {
+function getDutyInfo() {
   const today = getKoreaToday();
   const dutyAnchor = new Date("2026-05-11T00:00:00+09:00");
   const dutyWeek = Math.max(0, weeksBetween(dutyAnchor, today));
   const dutyStart = (dutyWeek * 2) % students.length;
-  const pair = [students[dutyStart], students[(dutyStart + 1) % students.length]];
   const nextDutyStart = ((dutyWeek + 1) * 2) % students.length;
-  const nextPair = [students[nextDutyStart], students[(nextDutyStart + 1) % students.length]];
-  document.querySelector("#duty-card").innerHTML = `<div class="duty-pair">${pair.map((n) => `<span>${shortName(n)}</span>`).join("")}</div><p>다음 주: ${nextPair.map(shortName).join(", ")}</p>`;
+  return {
+    pair: [students[dutyStart], students[(dutyStart + 1) % students.length]],
+    nextPair: [students[nextDutyStart], students[(nextDutyStart + 1) % students.length]]
+  };
+}
 
+function renderDutyAndCleaning() {
+  const { pair, nextPair } = getDutyInfo();
+  document.querySelector("#duty-card").innerHTML = `<p class="duty-label">이번 주 주번</p><div class="duty-pair">${pair.map((name) => `<span>${shortName(name)}</span>`).join("")}</div><p>다음 주: ${nextPair.map(shortName).join(", ")}</p>`;
+
+  const today = getKoreaToday();
   const cleanAnchor = new Date("2026-05-28T00:00:00+09:00");
   const cycle = Math.max(0, Math.floor((startOfWeek(today) - startOfWeek(cleanAnchor)) / (14 * 24 * 60 * 60 * 1000)));
   const start = addDays(cleanAnchor, cycle * 14);
@@ -128,34 +153,61 @@ function renderDutyAndCleaning() {
     .join("");
 }
 
-function renderRoster() {
-  document.querySelector("#roster-list").innerHTML = students.map((name, i) => `<li><strong>${name}</strong><span>${i + 1}</span></li>`).join("");
+function renderRoles() {
+  document.querySelector("#roles-list").innerHTML = individualRoles
+    .map(([role, student], index) => `<article class="role-item"><span>${String(index + 1).padStart(2, "0")}</span><strong>${role}</strong><p>${shortName(student)}</p></article>`)
+    .join("");
 }
 
-function autoFlow(selector, step = 1, interval = 2400) {
-  if (window.matchMedia("(max-width: 920px)").matches) return;
-  const el = document.querySelector(selector);
-  if (!el) return;
-  if (el.scrollHeight <= el.clientHeight + 2) return;
+function renderSeating() {
+  const chart = document.querySelector("#seating-chart");
+  chart.innerHTML = `
+    <div class="fixture teacher-desk">교탁</div>
+    ${seatingRows.map((row) => `<div class="seat-row">${row.map((name) => `<div class="seat"><span>${shortName(name)}</span></div>`).join("")}</div>`).join("")}
+    <div class="fixture door-zone">출입문</div>
+  `;
+}
 
-  let index = 0;
-  const max = Math.max(0, el.scrollHeight - el.clientHeight);
-  setInterval(() => {
-    index += step * 28;
-    if (index > max) index = 0;
-    el.scrollTo({ top: index, behavior: "smooth" });
-  }, interval);
+function setActiveView(view) {
+  document.querySelectorAll("[data-view]").forEach((button) => button.classList.toggle("is-active", button.dataset.view === view));
+  document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
+}
+
+function initViewRotation() {
+  let currentIndex = 0;
+  let rotationTimer = null;
+
+  const restart = () => {
+    window.clearInterval(rotationTimer);
+    if (window.matchMedia("(max-width: 920px)").matches) return;
+    rotationTimer = window.setInterval(() => {
+      currentIndex = (currentIndex + 1) % VIEW_ORDER.length;
+      setActiveView(VIEW_ORDER[currentIndex]);
+    }, 5000);
+  };
+
+  document.querySelectorAll("[data-view]").forEach((button) => {
+    button.addEventListener("click", () => {
+      currentIndex = VIEW_ORDER.indexOf(button.dataset.view);
+      setActiveView(button.dataset.view);
+      restart();
+      if (window.matchMedia("(max-width: 920px)").matches) {
+        document.querySelector(`[data-view-panel="${button.dataset.view}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+
+  restart();
+  window.matchMedia("(max-width: 920px)").addEventListener("change", restart);
 }
 
 async function init() {
   renderLive();
   await renderSchedule();
   renderDutyAndCleaning();
-  renderRoster();
-  autoFlow("#today-list", 1, 2600);
-  autoFlow("#upcoming-list", 1, 4200);
-  autoFlow("#cleaning-grid", 1, 2400);
-  autoFlow("#roster-list", 1, 2200);
+  renderRoles();
+  renderSeating();
+  initViewRotation();
 }
 
 init();

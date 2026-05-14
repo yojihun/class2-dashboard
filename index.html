@@ -7,59 +7,80 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body class="tv-screen">
-    <header class="hero">
-      <nav class="topbar" aria-label="주요 메뉴">
-        <a href="#today">오늘 일정</a>
-        <a href="#duties">주번</a>
-        <a href="#cleaning">청소</a>
-        <a href="#class-info">학급 정보</a>
-        <a href="management.html">관리</a>
+    <header class="hero dashboard-shell-hero">
+      <nav class="topbar dashboard-tabs" aria-label="대시보드 보기 선택">
+        <button type="button" class="view-tab is-active" data-view="schedule">일정</button>
+        <button type="button" class="view-tab" data-view="duties">주번 및 청소</button>
+        <button type="button" class="view-tab" data-view="roles">1인1역할</button>
+        <button type="button" class="view-tab" data-view="seating">자리배치</button>
+        <a class="management-pill" href="management.html">관리</a>
       </nav>
-      <div class="hero-grid">
+      <div class="hero-grid dashboard-hero-grid">
         <section class="hero-copy">
           <p class="eyebrow">미림마이스터고</p>
           <h1>2반 학급 대시보드</h1>
-          <p class="hero-text">관리 시스템에서 체크한 항목을 기준으로 오늘의 학급 일정을 자동 표시합니다.</p>
+          <p class="hero-text">오늘 필요한 정보만 크게, 조용하게, 한 화면에 보여줍니다.</p>
           <div class="hero-meta">
             <span id="live-date">날짜 불러오는 중...</span>
             <span id="school-day">요일 불러오는 중...</span>
           </div>
         </section>
-        <section class="teacher-card">
-          <p class="section-kicker">담임 선생님</p>
-          <h2>김지훈 선생님</h2>
-          <dl>
-            <div><dt>담당 교과</dt><dd>영어</dd></div>
-            <div><dt>교무실</dt><dd>3층 교사연구실 4</dd></div>
-            <div><dt>연락처</dt><dd><a href="tel:01094351270">010-9435-1270</a></dd></div>
-            <div><dt>Instagram</dt><dd><a href="https://www.instagram.com/ur.friend.jihoon" target="_blank" rel="noreferrer">@ur.friend.jihoon</a></dd></div>
-          </dl>
-        </section>
       </div>
     </header>
 
-    <main class="tv-main">
-      <section class="quick-links">
-        <a class="quick-link" href="https://forms.gle/XaJFMDDVPiBCgqVUA" target="_blank" rel="noreferrer"><span>자기 성찰</span><strong>학급 활동 자기 성찰 노트</strong></a>
-        <a class="quick-link" href="https://quizn.show/pbd/info/board/0835045" target="_blank" rel="noreferrer"><span>의견</span><strong>건의함</strong></a>
-        <a class="quick-link" href="https://quizn.show/pbd/info/board/0884859" target="_blank" rel="noreferrer"><span>상담</span><strong>익명상담 게시판</strong></a>
+    <main class="tv-main dashboard-stage">
+      <section class="mobile-only mobile-teacher-card teacher-card">
+        <p class="section-kicker">담임 선생님</p>
+        <h2>김지훈 선생님</h2>
+        <dl>
+          <div><dt>담당 교과</dt><dd>영어</dd></div>
+          <div><dt>교무실</dt><dd>3층 교사연구실 4</dd></div>
+          <div><dt>연락처</dt><dd><a href="tel:01094351270">010-9435-1270</a></dd></div>
+          <div><dt>Instagram</dt><dd><a href="https://www.instagram.com/ur.friend.jihoon" target="_blank" rel="noreferrer">@ur.friend.jihoon</a></dd></div>
+        </dl>
       </section>
 
-      <section id="today" class="dashboard-grid tv-top">
-        <article class="panel"><div class="panel-head"><div><p class="section-kicker">실시간</p><h2>오늘의 일정</h2></div></div><ul id="today-list" class="task-list"></ul></article>
-        <article class="panel"><div class="panel-head"><div><p class="section-kicker">다가오는 일정</p><h2>예정된 항목</h2></div></div><ul id="upcoming-list" class="compact-list"></ul></article>
-        <article id="duties" class="panel"><div class="panel-head"><div><p class="section-kicker">순환</p><h2>주번</h2></div></div><div id="duty-card" class="duty-card"></div></article>
+      <section class="mobile-only compact-links" aria-label="학급 링크">
+        <a href="https://forms.gle/XaJFMDDVPiBCgqVUA" target="_blank" rel="noreferrer">자기 성찰</a>
+        <a href="https://quizn.show/pbd/info/board/0835045" target="_blank" rel="noreferrer">건의함</a>
+        <a href="https://quizn.show/pbd/info/board/0884859" target="_blank" rel="noreferrer">익명상담</a>
       </section>
 
-      <section id="cleaning" class="dashboard-grid secondary tv-middle">
-        <article class="panel wide">
-          <div class="panel-head"><div><p class="section-kicker">2주 교체</p><h2>청소 분담</h2></div><span id="cleaning-period" class="badge muted">기간 계산 중...</span></div>
-          <div id="cleaning-grid" class="assignment-grid"></div>
+      <section class="fixed-board" aria-label="고정 메시지">
+        <article class="panel message-panel">
+          <p class="section-kicker">담임샘 메시지</p>
+          <h2>오늘도 서로의 속도를 지켜주기</h2>
+          <p>해야 할 일은 분명하게, 말은 다정하게. 2반은 오늘도 충분히 잘 해낼 수 있습니다.</p>
+        </article>
+        <article class="panel quote-panel">
+          <p class="section-kicker">오늘의 한마디</p>
+          <blockquote>작은 준비가 하루를 덜 흔들리게 만든다.</blockquote>
         </article>
       </section>
 
-      <section id="class-info" class="dashboard-grid secondary tv-bottom">
-        <article class="panel"><div class="panel-head"><div><p class="section-kicker">명렬</p><h2>우리반 학생</h2></div></div><ol id="roster-list" class="roster-list"></ol></article>
+      <section class="view-stage" aria-live="polite">
+        <article id="view-schedule" class="panel view-panel is-active" data-view-panel="schedule">
+          <div class="panel-head"><div><p class="section-kicker">Weekly Plan</p><h2>일정</h2></div></div>
+          <div id="schedule-board" class="schedule-board"></div>
+        </article>
+
+        <article id="view-duties" class="panel view-panel" data-view-panel="duties">
+          <div class="panel-head"><div><p class="section-kicker">Rotation</p><h2>주번 및 청소</h2></div><span id="cleaning-period" class="badge muted">기간 계산 중...</span></div>
+          <div class="duty-cleaning-layout">
+            <div id="duty-card" class="duty-card"></div>
+            <div id="cleaning-grid" class="assignment-grid"></div>
+          </div>
+        </article>
+
+        <article id="view-roles" class="panel view-panel" data-view-panel="roles">
+          <div class="panel-head"><div><p class="section-kicker">Class Jobs</p><h2>1인1역할</h2></div></div>
+          <div id="roles-list" class="roles-list role-board"></div>
+        </article>
+
+        <article id="view-seating" class="panel view-panel" data-view-panel="seating">
+          <div class="panel-head"><div><p class="section-kicker">Seat Map</p><h2>자리배치</h2></div></div>
+          <div id="seating-chart" class="seating-chart classroom-map"></div>
+        </article>
       </section>
     </main>
 
