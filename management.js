@@ -1,4 +1,5 @@
-import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/build/pdf.min.mjs";
+import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.mjs";
 
 const STORAGE_KEY = "class2_weekly_plans_v2";
 const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
@@ -104,7 +105,7 @@ function mapGeminiTasks(rawTasks) {
 
 async function extractPdfLines(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
-  const doc = await pdfjsLib.getDocument({ data: bytes, disableWorker: true }).promise;
+  const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
   const lines = [];
 
   for (let i = 1; i <= doc.numPages; i += 1) {
