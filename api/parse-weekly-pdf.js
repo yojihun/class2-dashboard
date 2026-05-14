@@ -35,6 +35,37 @@ function normalizeTasks(tasks) {
     .filter((t) => WEEKDAY_SET.has(t.day) && t.task.length > 0);
 }
 
+function isLikelyDetailLine(text) {
+  const line = String(text || "").trim();
+  if (!line) return true;
+  if (/^[-–—]\s*/.test(line)) return true;
+  if (/^(시간|기간|담당|대상|장소|참석|내용)\s*[:：]/.test(line)) return true;
+  if (/^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}/.test(line)) return true;
+  if (/^\d{1,2}:\d{2}\s*~/.test(line)) return true;
+  return false;
+}
+
+function cleanAndMergeTasks(tasks) {
+  const result = [];
+  for (const raw of tasks) {
+    const task = {
+      day: raw.day,
+      task: String(raw.task || "").trim(),
+      details: Array.isArray(raw.details) ? raw.details.slice() : []
+    };
+    if (!task.task) continue;
+
+    if (isLikelyDetailLine(task.task) && result.length > 0 && result[result.length - 1].day === task.day) {
+      result[result.length - 1].details.push(task.task.replace(/^[-–—]\s*/, ""));
+      result[result.length - 1].details.push(...task.details);
+      continue;
+    }
+
+    result.push(task);
+  }
+  return result;
+}
+
 function buildPrompt(fileName, lines) {
   return [
     "You are an expert parser for Korean school weekly task PDFs.",
@@ -126,7 +157,8 @@ module.exports = async (req, res) => {
     }
 
     const parsed = JSON.parse(jsonText);
-    const tasks = normalizeTasks(parsed.tasks);
+    const normalized = normalizeTasks(parsed.tasks);
+    const tasks = cleanAndMergeTasks(normalized);
     if (!tasks.length) {
       res.status(422).json({ error: "Gemini parsed 0 tasks. Please retry with the same file." });
       return;
