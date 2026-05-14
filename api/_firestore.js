@@ -66,6 +66,13 @@ async function createPlan({ title, sourceFileName, parserName, tasks }) {
   const now = new Date().toISOString();
   const ref = db.collection("plans").doc();
   const batch = db.batch();
+  const existingPlans = await db.collection("plans").get();
+
+  for (const planDoc of existingPlans.docs) {
+    const taskSnaps = await planDoc.ref.collection("tasks").get();
+    taskSnaps.docs.forEach((taskDoc) => batch.delete(taskDoc.ref));
+    batch.delete(planDoc.ref);
+  }
 
   batch.set(ref, {
     title,
@@ -87,7 +94,11 @@ async function createPlan({ title, sourceFileName, parserName, tasks }) {
     });
   });
 
-  batch.set(db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]), { activePlanId: ref.id, updatedAt: now }, { merge: true });
+  batch.set(
+    db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]),
+    { activePlanId: ref.id, publishedPlanId: null, updatedAt: now },
+    { merge: true }
+  );
   await batch.commit();
   return listPlans();
 }
