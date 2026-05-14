@@ -114,6 +114,19 @@ function formatMonthDay(date) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+function inferPlanWeekStart(plan) {
+  const raw = `${plan?.title || ""} ${plan?.sourceFileName || ""}`;
+  const year = Number((raw.match(/(20\d{2})/) || [])[1]) || getKoreaToday().getFullYear();
+  const range = raw.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일\s*~\s*(?:(\d{1,2})\s*월\s*)?(\d{1,2})\s*일/);
+  if (!range) return startOfWeek(getKoreaToday());
+  return new Date(`${year}-${String(Number(range[1])).padStart(2, "0")}-${String(Number(range[2])).padStart(2, "0")}T00:00:00+09:00`);
+}
+
+function formatScheduleDayLabel(plan, dayIndex) {
+  const date = addDays(inferPlanWeekStart(plan), dayIndex - 1);
+  return `${formatMonthDay(date)} ${DAY_NAMES_LONG[dayIndex]}`;
+}
+
 function shortName(name) {
   return String(name || "").slice(1) || String(name || "");
 }
@@ -155,12 +168,12 @@ function renderSchedule() {
 
     return `
       <section class="schedule-day ${isToday ? "is-today" : ""}">
-        <div class="schedule-day-head"><span>${DAY_NAMES_LONG[dayIndex]}</span><strong>${rows.length}</strong></div>
+        <div class="schedule-day-head"><span>${formatScheduleDayLabel(plan, dayIndex)}</span><strong>${rows.length}</strong></div>
         <ul>
           ${empty ? `<li class="empty-day">추가 일정 없음</li>` : rows.map((task) => {
             const text = Array.isArray(task) ? task[1] : task.text;
-            const time = Array.isArray(task) ? task[0] : DAY_NAMES_LONG[task.dayIndex];
-            return `<li><span>${escapeHtml(time)}</span><strong>${escapeHtml(text)}</strong></li>`;
+            const time = Array.isArray(task) ? task[0] : "";
+            return `<li>${time ? `<span>${escapeHtml(time)}</span>` : ""}<strong>${escapeHtml(text)}</strong></li>`;
           }).join("")}
         </ul>
       </section>`;
