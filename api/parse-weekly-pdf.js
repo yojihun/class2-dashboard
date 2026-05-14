@@ -1,8 +1,12 @@
 const WEEKDAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
 const VALID_WEEKDAYS = new Set(["월", "화", "수", "목", "금"]);
-const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]\s*/;
-const DASH_PREFIX = /^[-–—]\s*/;
+
+const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]?\s*/;
+const DASH_PREFIX = /^[-•·▪❍\s]+/;
 const TASK_BULLET = /❍/g;
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 function normalizeLine(line) {
   return String(line || "").replace(/\s+/g, " ").trim();
@@ -10,7 +14,7 @@ function normalizeLine(line) {
 
 function inferRange(fileName) {
   const name = String(fileName || "");
-  const year = Number((name.match(/(20\d{2})/) || [])[1] || 2026);
+  const year = Number((name.match(/(20\d{2})/) || [])[1] || new Date().getFullYear());
   const m = name.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
   if (!m) return null;
   return {
@@ -45,14 +49,13 @@ function splitDateBlocks(lines) {
     const line = normalizeLine(raw);
     if (!line) continue;
 
-    // marker line often appears as this glyph
+    // Some school PDFs have a private-use glyph near the date cell.
     if (line.includes("")) {
       flush();
       waitingDate = true;
       continue;
     }
 
-    // bare date line: 11, 12, 13...
     if (/^\d{1,2}$/.test(line)) {
       const n = Number(line);
       if (n >= 1 && n <= 31) {
@@ -80,10 +83,6 @@ function splitDateBlocks(lines) {
   return blocks;
 }
 
-function isNoise(line) {
-  return /^(교무기획부|교육연구부|학생안전부|마이스터기획부|취업지원부|상담복지부|글로벌역량강화부)$/.test(line);
-}
-
 function splitBulletTasks(line) {
   if (!line.includes("❍")) return [];
   return line
@@ -107,54 +106,40 @@ function parseBlockTasks(blockLines) {
 
   const addDetail = (line) => {
     if (!cur) return;
-    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, (m) => m.trim()).trim();
+    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").trim();
     if (cleaned) cur.details.push(cleaned);
   };
 
-  for (let i = 0; i < blockLines.length; i += 1) {
-    const raw = blockLines[i];
+  for (const raw of blockLines) {
     const line = normalizeLine(raw);
-    if (!line || isNoise(line)) continue;
+    if (!line) continue;
 
     const bulletTasks = splitBulletTasks(line);
     if (bulletTasks.length > 0) {
       flush();
-      // first segment starts current task
       cur = { task: bulletTasks[0], details: [] };
-      // additional segments are additional tasks on same line
-      for (let j = 1; j < bulletTasks.length; j += 1) {
+      for (let i = 1; i < bulletTasks.length; i += 1) {
         flush();
-        cur = { task: bulletTasks[j], details: [] };
+        cur = { task: bulletTasks[i], details: [] };
       }
       continue;
     }
 
     if (!cur) continue;
 
-    // prefixed details
     if (DASH_PREFIX.test(line) || DETAIL_PREFIX.test(line)) {
       addDetail(line);
       continue;
     }
 
-    // continuation logic:
-    // if previous detail expects continued names, append to last detail
+    // Append wrapped continuation fragments to details first.
     if (cur.details.length > 0) {
-      const last = cur.details[cur.details.length - 1];
-      if (/^(참석|담당)\s*[:：]/.test(last) || /,$/.test(last) || /^[가-힣A-Za-z·,\s]+$/.test(line)) {
-        cur.details[cur.details.length - 1] = `${last} ${line}`.replace(/\s+/g, " ").trim();
-        continue;
-      }
-    }
-
-    // if looks like wrapped title piece, append to task
-    if (line.length <= 18 && !/^\d/.test(line) && !line.includes(":")) {
-      cur.task = `${cur.task} ${line}`.replace(/\s+/g, " ").trim();
+      cur.details[cur.details.length - 1] = `${cur.details[cur.details.length - 1]} ${line}`.replace(/\s+/g, " ").trim();
       continue;
     }
 
-    // otherwise treat as detail
-    addDetail(line);
+    // Otherwise, treat as wrapped title fragment.
+    cur.task = `${cur.task} ${line}`.replace(/\s+/g, " ").trim();
   }
 
   flush();
@@ -169,7 +154,7 @@ function postClean(tasks) {
     if (!task) continue;
     if (/^\d{1,2}$/.test(task)) continue;
     if (task === "") continue;
-    if (DASH_PREFIX.test(task) || DETAIL_PREFIX.test(task) || /^\d{1,2}:\d{2}\s*~/.test(task)) {
+    if (DETAIL_PREFIX.test(task) || /^\d{1,2}:\d{2}\s*~/.test(task)) {
       if (merged.length > 0 && merged[merged.length - 1].day === t.day) {
         merged[merged.length - 1].details.push(task.replace(DASH_PREFIX, ""));
         merged[merged.length - 1].details.push(...details);
@@ -179,6 +164,59 @@ function postClean(tasks) {
     merged.push({ day: t.day, task, details });
   }
   return merged;
+}
+
+async function parseWithGemini(lines, fileName) {
+  if (!GEMINI_API_KEY) return null;
+
+  const prompt = [
+    "다음은 학교 주간업무계획 PDF에서 추출한 텍스트 줄입니다.",
+    "반드시 JSON만 출력하세요.",
+    '형식: {"tasks":[{"day":"월","task":"업무명","details":["상세1","상세2"]}]}',
+    "규칙:",
+    "1) 업무 시작은 주로 '❍' 입니다.",
+    "2) '-시간', '-기간', '-담당', '-장소', '-대상', '-참석' 등은 직전 업무 상세입니다.",
+    "3) 요일은 월/화/수/목/금만 사용.",
+    "4) 상세 줄 단독을 task로 만들지 마세요.",
+    `파일명: ${fileName}`,
+    "텍스트 줄:",
+    ...lines.slice(0, 8000)
+  ].join("\n");
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      generationConfig: {
+        temperature: 0,
+        responseMimeType: "application/json"
+      },
+      contents: [{ role: "user", parts: [{ text: prompt }] }]
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Gemini API failed: ${response.status}`);
+  }
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Gemini empty response");
+  const parsed = JSON.parse(text);
+  if (!Array.isArray(parsed?.tasks)) throw new Error("Gemini invalid JSON shape");
+  return parsed.tasks;
+}
+
+function normalizeGeminiTasks(tasks) {
+  const out = [];
+  for (const item of tasks || []) {
+    const day = normalizeLine(item?.day);
+    const task = normalizeLine(item?.task);
+    const details = Array.isArray(item?.details) ? item.details.map(normalizeLine).filter(Boolean) : [];
+    if (!VALID_WEEKDAYS.has(day) || !task) continue;
+    out.push({ day, task, details });
+  }
+  return out;
 }
 
 module.exports = async (req, res) => {
@@ -203,6 +241,18 @@ module.exports = async (req, res) => {
     return;
   }
 
+  // 1) Gemini first (cheapest configured model), 2) deterministic local parser.
+  try {
+    const geminiRaw = await parseWithGemini(lines, fileName);
+    const geminiTasks = postClean(normalizeGeminiTasks(geminiRaw));
+    if (geminiTasks.length) {
+      res.status(200).json({ tasks: geminiTasks, parser: "gemini", model: GEMINI_MODEL });
+      return;
+    }
+  } catch {
+    // Silent fallback to local parser.
+  }
+
   const range = inferRange(fileName);
   if (!range) {
     res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
@@ -220,9 +270,7 @@ module.exports = async (req, res) => {
     const day = dayFromDate(range.year, range.startMonth, block.date);
     if (!VALID_WEEKDAYS.has(day)) continue;
     const parsed = parseBlockTasks(block.lines);
-    for (const task of parsed) {
-      collected.push({ day, task: task.task, details: task.details });
-    }
+    for (const task of parsed) collected.push({ day, task: task.task, details: task.details });
   }
 
   const tasks = postClean(collected);
@@ -231,5 +279,5 @@ module.exports = async (req, res) => {
     return;
   }
 
-  res.status(200).json({ tasks });
+  res.status(200).json({ tasks, parser: "local" });
 };
