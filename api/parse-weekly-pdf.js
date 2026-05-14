@@ -1,188 +1,189 @@
-const WEEKDAYS = ["월", "화", "수", "목", "금"];
+const WEEKDAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
+const VALID_WEEKDAYS = new Set(["월", "화", "수", "목", "금"]);
+const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]\s*/;
+const DASH_PREFIX = /^[-–—]\s*/;
+const TASK_BULLET = /❍/g;
 
-function normalizeDay(day) {
-  const value = String(day || "").trim();
-  if (value.startsWith("월")) return "월";
-  if (value.startsWith("화")) return "화";
-  if (value.startsWith("수")) return "수";
-  if (value.startsWith("목")) return "목";
-  if (value.startsWith("금")) return "금";
-  return "";
+function normalizeLine(line) {
+  return String(line || "").replace(/\s+/g, " ").trim();
 }
 
-function isDetailLike(text) {
-  const line = String(text || "").trim();
-  if (!line) return true;
-  if (/^[-–—]\s*/.test(line)) return true;
-  if (/^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]/.test(line)) return true;
-  if (/^\d{1,2}:\d{2}\s*~/.test(line)) return true;
-  return false;
+function inferRange(fileName) {
+  const name = String(fileName || "");
+  const year = Number((name.match(/(20\d{2})/) || [])[1] || 2026);
+  const m = name.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (!m) return null;
+  return {
+    year,
+    startMonth: Number(m[1]),
+    startDay: Number(m[2]),
+    endMonth: Number(m[3]),
+    endDay: Number(m[4])
+  };
 }
 
-function cleanTasks(tasks) {
-  const merged = [];
-  for (const raw of tasks) {
-    const day = normalizeDay(raw.day);
-    const task = String(raw.task || "").trim();
-    const details = Array.isArray(raw.details) ? raw.details.map((d) => String(d).trim()).filter(Boolean) : [];
-    if (!day || !task) continue;
+function dayFromDate(year, month, day) {
+  const d = new Date(year, month - 1, day);
+  return WEEKDAY_ORDER[d.getDay()];
+}
 
-    if (/^[]+$/.test(task)) continue;
-    if (/^\d{1,2}$/.test(task)) continue;
-    if (/^(교무기획부|교육연구부|학생안전부|마이스터기획부|취업지원부|상담복지부|글로벌역량강화부)$/.test(task)) continue;
+function splitDateBlocks(lines) {
+  const blocks = [];
+  let currentDate = null;
+  let current = [];
+  let waitingDate = false;
 
-    if (isDetailLike(task) && merged.length > 0 && merged[merged.length - 1].day === day) {
-      merged[merged.length - 1].details.push(task.replace(/^[-–—]\s*/, ""));
-      merged[merged.length - 1].details.push(...details);
+  const flush = () => {
+    if (currentDate !== null && current.length > 0) {
+      blocks.push({ date: currentDate, lines: current.slice() });
+    }
+    currentDate = null;
+    current = [];
+  };
+
+  for (const raw of lines) {
+    const line = normalizeLine(raw);
+    if (!line) continue;
+
+    // marker line often appears as this glyph
+    if (line.includes("")) {
+      flush();
+      waitingDate = true;
       continue;
     }
 
-    merged.push({ day, task, details });
-  }
-  return merged.filter((t) => WEEKDAYS.includes(t.day));
-}
-
-function extractJson(text) {
-  const src = String(text || "");
-  const fenced = src.match(/```json\s*([\s\S]*?)```/i);
-  const candidate = fenced ? fenced[1] : src;
-  const first = candidate.indexOf("{");
-  const last = candidate.lastIndexOf("}");
-  if (first < 0 || last <= first) return null;
-  return candidate.slice(first, last + 1);
-}
-
-function inferWeekRange(fileName) {
-  // Example: 2026_주간업무계획_5월11일~5월15일.pdf
-  const name = String(fileName || "");
-  const yearMatch = name.match(/(20\d{2})/);
-  const year = yearMatch ? Number(yearMatch[1]) : 2026;
-  const rangeMatch = name.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
-  if (!rangeMatch) return null;
-  return {
-    year,
-    startMonth: Number(rangeMatch[1]),
-    startDay: Number(rangeMatch[2]),
-    endMonth: Number(rangeMatch[3]),
-    endDay: Number(rangeMatch[4])
-  };
-}
-
-function weekdayFromDate(year, month, day) {
-  const d = new Date(year, month - 1, day);
-  const names = ["일", "월", "화", "수", "목", "금", "토"];
-  return names[d.getDay()];
-}
-
-function splitBlocks(lines) {
-  // Supports:
-  // - marker line then date number line
-  // - bare date number line
-  const blocks = [];
-  let currentDate = null;
-  let currentLines = [];
-  let waitDate = false;
-
-  const flush = () => {
-    if (currentDate && currentLines.length) {
-      blocks.push({ date: currentDate, lines: currentLines.slice() });
-    }
-    currentDate = null;
-    currentLines = [];
-  };
-
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = String(lines[i] || "").trim();
-    if (!line) continue;
-
-    const bareDateMatch = line.match(/^(\d{1,2})$/);
-    if (bareDateMatch) {
-      const n = Number(bareDateMatch[1]);
+    // bare date line: 11, 12, 13...
+    if (/^\d{1,2}$/.test(line)) {
+      const n = Number(line);
       if (n >= 1 && n <= 31) {
         flush();
         currentDate = n;
-        waitDate = false;
+        waitingDate = false;
         continue;
       }
     }
 
-    if (line.includes("")) {
-      flush();
-      waitDate = true;
-      continue;
-    }
-
-    if (waitDate) {
+    if (waitingDate) {
       const n = Number(line.replace(/[^\d]/g, ""));
       if (Number.isFinite(n) && n >= 1 && n <= 31) {
         currentDate = n;
-        waitDate = false;
+        waitingDate = false;
         continue;
       }
-      waitDate = false;
+      waitingDate = false;
     }
 
-    if (currentDate !== null) currentLines.push(line);
+    if (currentDate !== null) current.push(line);
   }
 
   flush();
   return blocks;
 }
 
-function dayPrompt(dayKor, date, blockLines) {
-  return [
-    "You are parsing one weekday block from a Korean school weekly task PDF.",
-    `This block is fixed: ${dayKor}요일 (${date}일).`,
-    "",
-    "Rules:",
-    "1) A task starts with '❍'.",
-    "2) One line can contain multiple tasks: '❍A❍B' -> split.",
-    "3) '-시간/-기간/-담당/-대상/-장소/-참석/-내용' lines belong to previous task.",
-    "4) Wrapped continuation lines without '❍' should be appended to previous task.",
-    "5) Do not emit pure detail lines as standalone tasks.",
-    "",
-    "Return STRICT JSON only:",
-    "{\"tasks\":[{\"task\":\"string\",\"details\":[\"string\"]}]}",
-    "",
-    "Block lines:",
-    ...blockLines
-  ].join("\n");
+function isNoise(line) {
+  return /^(교무기획부|교육연구부|학생안전부|마이스터기획부|취업지원부|상담복지부|글로벌역량강화부)$/.test(line);
 }
 
-async function callGemini(apiKey, prompt) {
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-      })
-    }
-  );
+function splitBulletTasks(line) {
+  if (!line.includes("❍")) return [];
+  return line
+    .split(TASK_BULLET)
+    .map((s) => normalizeLine(s))
+    .filter(Boolean);
+}
 
-  if (!resp.ok) {
-    const text = await resp.text();
-    throw new Error(`Gemini API error: ${text}`);
+function parseBlockTasks(blockLines) {
+  const tasks = [];
+  let cur = null;
+
+  const flush = () => {
+    if (!cur || !cur.task) return;
+    cur.task = normalizeLine(cur.task);
+    cur.details = cur.details.map((d) => normalizeLine(d)).filter(Boolean);
+    if (!cur.task) return;
+    tasks.push(cur);
+    cur = null;
+  };
+
+  const addDetail = (line) => {
+    if (!cur) return;
+    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, (m) => m.trim()).trim();
+    if (cleaned) cur.details.push(cleaned);
+  };
+
+  for (let i = 0; i < blockLines.length; i += 1) {
+    const raw = blockLines[i];
+    const line = normalizeLine(raw);
+    if (!line || isNoise(line)) continue;
+
+    const bulletTasks = splitBulletTasks(line);
+    if (bulletTasks.length > 0) {
+      flush();
+      // first segment starts current task
+      cur = { task: bulletTasks[0], details: [] };
+      // additional segments are additional tasks on same line
+      for (let j = 1; j < bulletTasks.length; j += 1) {
+        flush();
+        cur = { task: bulletTasks[j], details: [] };
+      }
+      continue;
+    }
+
+    if (!cur) continue;
+
+    // prefixed details
+    if (DASH_PREFIX.test(line) || DETAIL_PREFIX.test(line)) {
+      addDetail(line);
+      continue;
+    }
+
+    // continuation logic:
+    // if previous detail expects continued names, append to last detail
+    if (cur.details.length > 0) {
+      const last = cur.details[cur.details.length - 1];
+      if (/^(참석|담당)\s*[:：]/.test(last) || /,$/.test(last) || /^[가-힣A-Za-z·,\s]+$/.test(line)) {
+        cur.details[cur.details.length - 1] = `${last} ${line}`.replace(/\s+/g, " ").trim();
+        continue;
+      }
+    }
+
+    // if looks like wrapped title piece, append to task
+    if (line.length <= 18 && !/^\d/.test(line) && !line.includes(":")) {
+      cur.task = `${cur.task} ${line}`.replace(/\s+/g, " ").trim();
+      continue;
+    }
+
+    // otherwise treat as detail
+    addDetail(line);
   }
 
-  const data = await resp.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const json = extractJson(text);
-  if (!json) throw new Error("Gemini response did not contain valid JSON.");
-  return JSON.parse(json);
+  flush();
+  return tasks;
+}
+
+function postClean(tasks) {
+  const merged = [];
+  for (const t of tasks) {
+    const task = normalizeLine(t.task);
+    const details = (t.details || []).map((d) => normalizeLine(d)).filter(Boolean);
+    if (!task) continue;
+    if (/^\d{1,2}$/.test(task)) continue;
+    if (task === "") continue;
+    if (DASH_PREFIX.test(task) || DETAIL_PREFIX.test(task) || /^\d{1,2}:\d{2}\s*~/.test(task)) {
+      if (merged.length > 0 && merged[merged.length - 1].day === t.day) {
+        merged[merged.length - 1].details.push(task.replace(DASH_PREFIX, ""));
+        merged[merged.length - 1].details.push(...details);
+      }
+      continue;
+    }
+    merged.push({ day: t.day, task, details });
+  }
+  return merged;
 }
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
     return;
   }
 
@@ -202,39 +203,33 @@ module.exports = async (req, res) => {
     return;
   }
 
-  try {
-    const week = inferWeekRange(fileName);
-    const blocks = splitBlocks(lines);
-    if (!week || !blocks.length) {
-      res.status(422).json({ error: "PDF에서 날짜 블록(예: 11,12,13...)을 찾지 못했습니다." });
-      return;
-    }
-
-    const collected = [];
-    for (const block of blocks) {
-      const day = weekdayFromDate(week.year, week.startMonth, block.date);
-      if (!WEEKDAYS.includes(day)) continue;
-
-      const parsed = await callGemini(apiKey, dayPrompt(day, block.date, block.lines));
-      const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
-
-      for (const t of tasks) {
-        collected.push({
-          day,
-          task: String(t.task || "").trim(),
-          details: Array.isArray(t.details) ? t.details.map((d) => String(d).trim()).filter(Boolean) : []
-        });
-      }
-    }
-
-    const tasks = cleanTasks(collected);
-    if (!tasks.length) {
-      res.status(422).json({ error: "업무 추출 결과가 비어 있습니다." });
-      return;
-    }
-
-    res.status(200).json({ tasks });
-  } catch (err) {
-    res.status(500).json({ error: err.message || "Server error while parsing PDF." });
+  const range = inferRange(fileName);
+  if (!range) {
+    res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
+    return;
   }
+
+  const blocks = splitDateBlocks(lines);
+  if (!blocks.length) {
+    res.status(422).json({ error: "PDF에서 날짜 블록(11,12,13...)을 찾지 못했습니다." });
+    return;
+  }
+
+  const collected = [];
+  for (const block of blocks) {
+    const day = dayFromDate(range.year, range.startMonth, block.date);
+    if (!VALID_WEEKDAYS.has(day)) continue;
+    const parsed = parseBlockTasks(block.lines);
+    for (const task of parsed) {
+      collected.push({ day, task: task.task, details: task.details });
+    }
+  }
+
+  const tasks = postClean(collected);
+  if (!tasks.length) {
+    res.status(422).json({ error: "업무 추출 결과가 비어 있습니다." });
+    return;
+  }
+
+  res.status(200).json({ tasks });
 };
