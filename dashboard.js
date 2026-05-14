@@ -19,15 +19,17 @@ function loadState() {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     return {
       plans: Array.isArray(parsed.plans) ? parsed.plans : [],
-      activePlanId: parsed.activePlanId || null
+      activePlanId: parsed.activePlanId || null,
+      publishedPlanId: parsed.publishedPlanId || null
     };
   } catch {
-    return { plans: [], activePlanId: null };
+    return { plans: [], activePlanId: null, publishedPlanId: null };
   }
 }
 
-function currentPlan(state) {
-  return state.plans.find((p) => p.id === state.activePlanId) || null;
+function resolveDashboardPlan(state) {
+  const preferred = state.publishedPlanId || state.activePlanId;
+  return state.plans.find((p) => p.id === preferred) || null;
 }
 
 function getKoreaToday() {
@@ -64,7 +66,7 @@ function renderLive() {
 
 function renderSchedule() {
   const state = loadState();
-  const plan = currentPlan(state);
+  const plan = resolveDashboardPlan(state);
   const today = getKoreaToday().getDay();
   const todayList = document.querySelector("#today-list");
   const upcomingList = document.querySelector("#upcoming-list");
@@ -86,7 +88,7 @@ function renderSchedule() {
       .map((task) => `<li><span class="task-time">${DAY_NAMES_LONG[task.dayIndex] || `${task.dayIndex}일`}</span><strong>${task.text}</strong></li>`)
       .join("");
   } else {
-    upcomingList.innerHTML = `<li><strong>아직 체크된 2반 일정이 없습니다. 관리 페이지에서 항목을 선택해 주세요.</strong></li>`;
+    upcomingList.innerHTML = `<li><strong>아직 저장된 반영 일정이 없습니다. 관리 페이지에서 체크 후 저장하세요.</strong></li>`;
   }
 }
 

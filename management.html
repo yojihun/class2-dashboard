@@ -27,6 +27,10 @@
             <input id="weekly-pdf-input" type="file" accept="application/pdf">
             <select id="plan-select" aria-label="주간 계획 선택"></select>
           </div>
+          <div class="manager-actions">
+            <button id="save-plan-btn" type="button">저장(대시보드 반영)</button>
+            <span id="published-plan-label">현재 반영: 없음</span>
+          </div>
           <p class="manager-help">파싱 우선순위: `/api/parse-weekly-pdf` Gemini API -> 로컬 파서 순서로 동작합니다.</p>
           <div id="plan-status" class="plan-status">아직 업로드된 주간 업무가 없습니다.</div>
           <div id="plan-tasks" class="plan-tasks"></div>

@@ -6,16 +6,18 @@ const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
 const DAY_NAMES = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 
 let state = loadState();
+let dirty = false;
 
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     return {
       plans: Array.isArray(parsed.plans) ? parsed.plans : [],
-      activePlanId: parsed.activePlanId || null
+      activePlanId: parsed.activePlanId || null,
+      publishedPlanId: parsed.publishedPlanId || null
     };
   } catch {
-    return { plans: [], activePlanId: null };
+    return { plans: [], activePlanId: null, publishedPlanId: null };
   }
 }
 
@@ -27,6 +29,14 @@ function currentPlan() {
   return state.plans.find((p) => p.id === state.activePlanId) || null;
 }
 
+function setDirty(value) {
+  dirty = value;
+  const status = document.querySelector("#plan-status");
+  if (value) {
+    status.textContent = "변경사항이 있습니다. 저장 버튼을 눌러야 대시보드에 반영됩니다.";
+  }
+}
+
 function normalize(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
@@ -35,18 +45,15 @@ function detectDay(line) {
   const text = normalize(line);
   const startMatch = text.match(/^(월|화|수|목|금)\s*[\.:]?\s*(\d{1,2})?/);
   if (startMatch) return WEEKDAY_TO_INDEX[startMatch[1]];
-
   const innerMatch = text.match(/(?:\(|\[)?(월|화|수|목|금)(?:\)|\])?\s*(?:요일)?/);
-  if (innerMatch) return WEEKDAY_TO_INDEX[innerMatch[1]];
-  return null;
+  return innerMatch ? WEEKDAY_TO_INDEX[innerMatch[1]] : 0;
 }
 
 function parsePdfLocally(lines) {
   const tasks = [];
-  let dayIndex = null;
+  let dayIndex = 0;
   let currentTask = null;
   const taskStartPattern = /[❍○◦●▪□■]/;
-  const detailPrefixPattern = /^[-–—]\s*/;
 
   const flush = () => {
     if (!currentTask || !currentTask.title) return;
@@ -72,35 +79,24 @@ function parsePdfLocally(lines) {
     if (!dayIndex) continue;
 
     if (taskStartPattern.test(line)) {
+      const split = line.split(/[❍○◦●▪□■]/).map((s) => s.trim()).filter(Boolean);
+      if (!split.length) continue;
       flush();
-      currentTask = {
-        dayIndex,
-        title: line.replace(/^.*?[❍○◦●▪□■]\s*/, "").trim(),
-        details: []
-      };
-      continue;
-    }
-    if (!currentTask) {
-      // Fallback: if we are in a day block and see meaningful content, treat it as a task.
-      if (line.length >= 6 && !/^(담당|부서|비고|일정|주간업무|업무계획)$/i.test(line)) {
-        currentTask = { dayIndex, title: line, details: [] };
+      currentTask = { dayIndex, title: split[0], details: [] };
+      for (let i = 1; i < split.length; i += 1) {
+        flush();
+        currentTask = { dayIndex, title: split[i], details: [] };
       }
       continue;
     }
 
-    if (detailPrefixPattern.test(line) || /^시간[:：]/.test(line) || /^기간[:：]/.test(line) || /^담당[:：]/.test(line)) {
-      currentTask.details.push(line.replace(detailPrefixPattern, "").trim());
+    if (!currentTask) continue;
+    if (/^[-–—]\s*/.test(line) || /^(시간|기간|담당|대상|장소|참석|내용)\s*[:：]/.test(line)) {
+      currentTask.details.push(line.replace(/^[-–—]\s*/, ""));
     } else {
-      // If a long sentence appears, it's likely a new task line in some PDF layouts.
-      if (line.length >= 12 && currentTask.details.length >= 1) {
-        flush();
-        currentTask = { dayIndex, title: line, details: [] };
-      } else {
-        currentTask.details.push(line);
-      }
+      currentTask.details.push(line);
     }
   }
-
   flush();
   return tasks;
 }
@@ -116,6 +112,7 @@ function mapGeminiTasks(rawTasks) {
     if (day.startsWith("금")) return 5;
     return 0;
   };
+
   return rawTasks
     .map((item) => {
       const dayIndex = mapDay(item.day);
@@ -135,7 +132,6 @@ async function extractPdfLines(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
   const lines = [];
-
   for (let i = 1; i <= doc.numPages; i += 1) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
@@ -190,7 +186,8 @@ async function handleUpload(event) {
     state.activePlanId = plan.id;
     saveState();
     renderManager();
-    status.textContent = `업로드 완료: ${plan.title} (${tasks.length}개 항목, ${parserName} 파서)`;
+    setDirty(true);
+    status.textContent = `업로드 완료: ${plan.title} (${tasks.length}개 항목, ${parserName} 파서). 저장을 눌러 반영하세요.`;
   } catch (error) {
     status.textContent = `업로드 실패: ${error.message}`;
   } finally {
@@ -202,6 +199,7 @@ function setActivePlan(id) {
   state.activePlanId = id;
   saveState();
   renderManager();
+  setDirty(true);
 }
 
 function toggleHomeroom(taskId, checked) {
@@ -210,8 +208,24 @@ function toggleHomeroom(taskId, checked) {
   const task = plan.tasks.find((t) => t.id === taskId);
   if (!task) return;
   task.homeroom = checked;
-  saveState();
   renderManager();
+  setDirty(true);
+}
+
+function savePublishedPlan() {
+  if (!state.activePlanId) return;
+  state.publishedPlanId = state.activePlanId;
+  saveState();
+  dirty = false;
+  const status = document.querySelector("#plan-status");
+  status.textContent = "저장 완료: 현재 선택한 플랜이 학생용 대시보드에 반영되었습니다.";
+  renderPublishedLabel();
+}
+
+function renderPublishedLabel() {
+  const label = document.querySelector("#published-plan-label");
+  const published = state.plans.find((p) => p.id === state.publishedPlanId);
+  label.textContent = published ? `현재 반영: ${published.title}` : "현재 반영: 없음";
 }
 
 function renderManager() {
@@ -224,6 +238,7 @@ function renderManager() {
     select.disabled = true;
     wrap.innerHTML = "";
     status.textContent = "아직 업로드된 주간 업무가 없습니다.";
+    renderPublishedLabel();
     return;
   }
 
@@ -239,7 +254,7 @@ function renderManager() {
   const plan = currentPlan();
   if (!plan) return;
   const marked = plan.tasks.filter((t) => t.homeroom).length;
-  status.textContent = `${plan.title} · 2반 반영 항목: ${marked}/${plan.tasks.length}`;
+  if (!dirty) status.textContent = `${plan.title} · 2반 반영 체크: ${marked}/${plan.tasks.length}`;
 
   const days = [1, 2, 3, 4, 5].map((d) => ({ d, items: plan.tasks.filter((t) => t.dayIndex === d) }));
   wrap.innerHTML = days
@@ -267,11 +282,13 @@ function renderManager() {
   wrap.querySelectorAll("input[type='checkbox']").forEach((input) => {
     input.addEventListener("change", (e) => toggleHomeroom(e.target.dataset.taskId, e.target.checked));
   });
+  renderPublishedLabel();
 }
 
 function bindEvents() {
   document.querySelector("#weekly-pdf-input").addEventListener("change", handleUpload);
   document.querySelector("#plan-select").addEventListener("change", (e) => setActivePlan(e.target.value));
+  document.querySelector("#save-plan-btn").addEventListener("click", savePublishedPlan);
 }
 
 function init() {

@@ -352,6 +352,30 @@ main {
   color: var(--muted);
 }
 
+.manager-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.manager-actions button {
+  min-height: 38px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  background: var(--green);
+  color: #fff;
+  font-weight: 700;
+  padding: 0 14px;
+  cursor: pointer;
+}
+
+.manager-actions span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .plan-status {
   border: 1px solid var(--line);
   border-radius: 8px;
