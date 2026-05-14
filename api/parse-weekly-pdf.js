@@ -166,22 +166,40 @@ function postClean(tasks) {
   return merged;
 }
 
-async function parseWithGemini(lines, fileName) {
-  if (!GEMINI_API_KEY) return null;
+function extractJson(text) {
+  const src = String(text || "");
+  const fenced = src.match(/```json\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1] : src;
+  const first = candidate.indexOf("{");
+  const last = candidate.lastIndexOf("}");
+  if (first < 0 || last <= first) return null;
+  return candidate.slice(first, last + 1);
+}
 
-  const prompt = [
-    "다음은 학교 주간업무계획 PDF에서 추출한 텍스트 줄입니다.",
+function geminiBlockPrompt(day, date, lines) {
+  return [
+    "다음은 학교 주간업무계획 PDF에서 추출한 하루치 날짜 블록입니다.",
+    `이 블록의 날짜/요일은 이미 확정되어 있습니다: ${date}일 ${day}요일.`,
+    "요일을 추론하거나 변경하지 말고, 업무명과 상세만 추출하세요.",
     "반드시 JSON만 출력하세요.",
-    '형식: {"tasks":[{"day":"월","task":"업무명","details":["상세1","상세2"]}]}',
+    '형식: {"tasks":[{"task":"업무명","details":["상세1","상세2"]}]}',
     "규칙:",
     "1) 업무 시작은 주로 '❍' 입니다.",
-    "2) '-시간', '-기간', '-담당', '-장소', '-대상', '-참석' 등은 직전 업무 상세입니다.",
-    "3) 요일은 월/화/수/목/금만 사용.",
+    "2) 한 줄에 '❍A❍B'처럼 여러 업무가 있으면 각각 분리합니다.",
+    "3) '-시간', '-기간', '-담당', '-장소', '-대상', '-참석' 등은 직전 업무 상세입니다.",
     "4) 상세 줄 단독을 task로 만들지 마세요.",
-    `파일명: ${fileName}`,
+    "5) 날짜, 요일, 부서명만 있는 줄은 task로 만들지 마세요.",
     "텍스트 줄:",
-    ...lines.slice(0, 8000)
+    ...lines.slice(0, 1500)
   ].join("\n");
+}
+
+async function parseBlockWithGemini(block, range) {
+  if (!GEMINI_API_KEY) return null;
+
+  const day = dayFromDate(range.year, range.startMonth, block.date);
+  if (!VALID_WEEKDAYS.has(day)) return [];
+  const prompt = geminiBlockPrompt(day, block.date, block.lines);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const response = await fetch(url, {
@@ -202,21 +220,16 @@ async function parseWithGemini(lines, fileName) {
   const data = await response.json();
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error("Gemini empty response");
-  const parsed = JSON.parse(text);
+  const parsed = JSON.parse(extractJson(text) || text);
   if (!Array.isArray(parsed?.tasks)) throw new Error("Gemini invalid JSON shape");
-  return parsed.tasks;
-}
 
-function normalizeGeminiTasks(tasks) {
-  const out = [];
-  for (const item of tasks || []) {
-    const day = normalizeLine(item?.day);
-    const task = normalizeLine(item?.task);
-    const details = Array.isArray(item?.details) ? item.details.map(normalizeLine).filter(Boolean) : [];
-    if (!VALID_WEEKDAYS.has(day) || !task) continue;
-    out.push({ day, task, details });
-  }
-  return out;
+  return parsed.tasks
+    .map((item) => {
+      const task = normalizeLine(item?.task);
+      const details = Array.isArray(item?.details) ? item.details.map(normalizeLine).filter(Boolean) : [];
+      return task ? { day, task, details } : null;
+    })
+    .filter(Boolean);
 }
 
 module.exports = async (req, res) => {
@@ -241,18 +254,6 @@ module.exports = async (req, res) => {
     return;
   }
 
-  // 1) Gemini first (cheapest configured model), 2) deterministic local parser.
-  try {
-    const geminiRaw = await parseWithGemini(lines, fileName);
-    const geminiTasks = postClean(normalizeGeminiTasks(geminiRaw));
-    if (geminiTasks.length) {
-      res.status(200).json({ tasks: geminiTasks, parser: "gemini", model: GEMINI_MODEL });
-      return;
-    }
-  } catch {
-    // Silent fallback to local parser.
-  }
-
   const range = inferRange(fileName);
   if (!range) {
     res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
@@ -263,6 +264,22 @@ module.exports = async (req, res) => {
   if (!blocks.length) {
     res.status(422).json({ error: "PDF에서 날짜 블록(11,12,13...)을 찾지 못했습니다." });
     return;
+  }
+
+  // Lock dates before Gemini runs. Gemini only extracts task text inside each date block.
+  try {
+    const geminiCollected = [];
+    for (const block of blocks) {
+      const parsed = await parseBlockWithGemini(block, range);
+      if (parsed) geminiCollected.push(...parsed);
+    }
+    const geminiTasks = postClean(geminiCollected);
+    if (geminiTasks.length) {
+      res.status(200).json({ tasks: geminiTasks, parser: "gemini-date-blocks", model: GEMINI_MODEL });
+      return;
+    }
+  } catch {
+    // Silent fallback to deterministic local parser below.
   }
 
   const collected = [];

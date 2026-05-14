@@ -1,28 +1,31 @@
 import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.mjs";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.mjs";
 
-const STORAGE_KEY = "class2_weekly_plans_v2";
 const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
 const DAY_NAMES = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 
-let state = loadState();
+let state = { plans: [], activePlanId: null, publishedPlanId: null };
 let dirty = false;
 
-function loadState() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    return {
-      plans: Array.isArray(parsed.plans) ? parsed.plans : [],
-      activePlanId: parsed.activePlanId || null,
-      publishedPlanId: parsed.publishedPlanId || null
-    };
-  } catch {
-    return { plans: [], activePlanId: null, publishedPlanId: null };
-  }
+async function apiRequest(path, options = {}) {
+  const response = await fetch(path, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || "서버 요청에 실패했습니다.");
+  return data;
 }
 
-function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+async function loadStateFromServer() {
+  const status = document.querySelector("#plan-status");
+  status.textContent = "Firestore에서 주간 계획을 불러오는 중입니다...";
+  state = await apiRequest("/api/plans", { cache: "no-store" });
+  dirty = false;
+  renderManager();
 }
 
 function currentPlan() {
@@ -176,18 +179,19 @@ async function handleUpload(event) {
     }
     if (!tasks.length) throw new Error("요일별 업무 항목을 찾지 못했습니다.");
 
-    const plan = {
-      id: crypto.randomUUID(),
-      title: file.name.replace(/\.pdf$/i, ""),
-      createdAt: new Date().toISOString(),
-      tasks
-    };
-    state.plans.unshift(plan);
-    state.activePlanId = plan.id;
-    saveState();
+    const title = file.name.replace(/\.pdf$/i, "");
+    state = await apiRequest("/api/plans", {
+      method: "POST",
+      body: JSON.stringify({
+        title,
+        sourceFileName: file.name,
+        parserName,
+        tasks
+      })
+    });
     renderManager();
     setDirty(true);
-    status.textContent = `업로드 완료: ${plan.title} (${tasks.length}개 항목, ${parserName} 파서). 저장을 눌러 반영하세요.`;
+    status.textContent = `업로드 완료: ${title} (${tasks.length}개 항목, ${parserName} 파서). 저장을 눌러 반영하세요.`;
   } catch (error) {
     status.textContent = `업로드 실패: ${error.message}`;
   } finally {
@@ -195,14 +199,20 @@ async function handleUpload(event) {
   }
 }
 
-function setActivePlan(id) {
-  state.activePlanId = id;
-  saveState();
-  renderManager();
-  setDirty(true);
+async function setActivePlan(id) {
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "setActivePlan", planId: id })
+    });
+    renderManager();
+    setDirty(true);
+  } catch (error) {
+    document.querySelector("#plan-status").textContent = `선택 변경 실패: ${error.message}`;
+  }
 }
 
-function toggleHomeroom(taskId, checked) {
+async function toggleHomeroom(taskId, checked) {
   const plan = currentPlan();
   if (!plan) return;
   const task = plan.tasks.find((t) => t.id === taskId);
@@ -210,16 +220,34 @@ function toggleHomeroom(taskId, checked) {
   task.homeroom = checked;
   renderManager();
   setDirty(true);
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "toggleTask", planId: plan.id, taskId, homeroom: checked })
+    });
+    renderManager();
+    setDirty(true);
+  } catch (error) {
+    task.homeroom = !checked;
+    renderManager();
+    document.querySelector("#plan-status").textContent = `체크 저장 실패: ${error.message}`;
+  }
 }
 
-function savePublishedPlan() {
+async function savePublishedPlan() {
   if (!state.activePlanId) return;
-  state.publishedPlanId = state.activePlanId;
-  saveState();
-  dirty = false;
-  const status = document.querySelector("#plan-status");
-  status.textContent = "저장 완료: 현재 선택한 플랜이 학생용 대시보드에 반영되었습니다.";
-  renderPublishedLabel();
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "publish", planId: state.activePlanId })
+    });
+    dirty = false;
+    const status = document.querySelector("#plan-status");
+    status.textContent = "저장 완료: 현재 선택한 플랜이 학생용 대시보드에 반영되었습니다.";
+    renderManager();
+  } catch (error) {
+    document.querySelector("#plan-status").textContent = `저장 실패: ${error.message}`;
+  }
 }
 
 function renderPublishedLabel() {
@@ -291,9 +319,13 @@ function bindEvents() {
   document.querySelector("#save-plan-btn").addEventListener("click", savePublishedPlan);
 }
 
-function init() {
+async function init() {
   bindEvents();
-  renderManager();
+  try {
+    await loadStateFromServer();
+  } catch (error) {
+    document.querySelector("#plan-status").textContent = `Firestore 연결 실패: ${error.message}`;
+  }
 }
 
 init();

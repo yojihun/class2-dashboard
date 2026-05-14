@@ -1,4 +1,3 @@
-const STORAGE_KEY = "class2_weekly_plans_v2";
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 const DAY_NAMES_LONG = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 
@@ -14,9 +13,11 @@ const fallbackSchedules = {
   5: [["16:30", "방과후학교 A"], ["종례", "주간 정리"]]
 };
 
-function loadState() {
+async function loadState() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+    const response = await fetch("/api/plans", { cache: "no-store" });
+    if (!response.ok) throw new Error("Failed to load plans");
+    const parsed = await response.json();
     return {
       plans: Array.isArray(parsed.plans) ? parsed.plans : [],
       activePlanId: parsed.activePlanId || null,
@@ -64,8 +65,8 @@ function renderLive() {
   document.querySelector("#school-day").textContent = `${DAY_NAMES[today.getDay()]}요일`;
 }
 
-function renderSchedule() {
-  const state = loadState();
+async function renderSchedule() {
+  const state = await loadState();
   const plan = resolveDashboardPlan(state);
   const today = getKoreaToday().getDay();
   const todayList = document.querySelector("#today-list");
@@ -127,9 +128,9 @@ function autoFlow(selector, step = 1, interval = 2400) {
   }, interval);
 }
 
-function init() {
+async function init() {
   renderLive();
-  renderSchedule();
+  await renderSchedule();
   renderDutyAndCleaning();
   renderRoster();
   autoFlow("#today-list", 1, 2600);
