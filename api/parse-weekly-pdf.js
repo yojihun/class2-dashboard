@@ -1,4 +1,4 @@
-const WEEKDAY_SET = new Set(["월", "화", "수", "목", "금"]);
+const WEEKDAYS = ["월", "화", "수", "목", "금"];
 
 function normalizeDay(day) {
   const value = String(day || "").trim();
@@ -10,46 +10,57 @@ function normalizeDay(day) {
   return "";
 }
 
-function isLikelyDetailLine(text) {
+function isDetailLike(text) {
   const line = String(text || "").trim();
   if (!line) return true;
   if (/^[-–—]\s*/.test(line)) return true;
   if (/^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]/.test(line)) return true;
-  if (/^\d{1,2}:\d{2}\s*~\s*\d{1,2}:\d{2}/.test(line)) return true;
   if (/^\d{1,2}:\d{2}\s*~/.test(line)) return true;
   return false;
 }
 
-function cleanAndMergeTasks(tasks) {
-  const result = [];
+function cleanTasks(tasks) {
+  const merged = [];
   for (const raw of tasks) {
-    const task = {
-      day: normalizeDay(raw.day),
-      task: String(raw.task || "").trim(),
-      details: Array.isArray(raw.details) ? raw.details.map((d) => String(d).trim()).filter(Boolean) : []
-    };
-    if (!task.day || !task.task) continue;
+    const day = normalizeDay(raw.day);
+    const task = String(raw.task || "").trim();
+    const details = Array.isArray(raw.details) ? raw.details.map((d) => String(d).trim()).filter(Boolean) : [];
+    if (!day || !task) continue;
 
-    if (isLikelyDetailLine(task.task) && result.length > 0 && result[result.length - 1].day === task.day) {
-      result[result.length - 1].details.push(task.task.replace(/^[-–—]\s*/, ""));
-      result[result.length - 1].details.push(...task.details);
+    if (/^[]+$/.test(task)) continue;
+    if (/^\d{1,2}$/.test(task)) continue;
+    if (/^(교무기획부|교육연구부|학생안전부|마이스터기획부|취업지원부|상담복지부|글로벌역량강화부)$/.test(task)) continue;
+
+    if (isDetailLike(task) && merged.length > 0 && merged[merged.length - 1].day === day) {
+      merged[merged.length - 1].details.push(task.replace(/^[-–—]\s*/, ""));
+      merged[merged.length - 1].details.push(...details);
       continue;
     }
 
-    result.push(task);
+    merged.push({ day, task, details });
   }
-  return result.filter((t) => WEEKDAY_SET.has(t.day) && t.task.length > 0);
+  return merged.filter((t) => WEEKDAYS.includes(t.day));
+}
+
+function extractJson(text) {
+  const src = String(text || "");
+  const fenced = src.match(/```json\s*([\s\S]*?)```/i);
+  const candidate = fenced ? fenced[1] : src;
+  const first = candidate.indexOf("{");
+  const last = candidate.lastIndexOf("}");
+  if (first < 0 || last <= first) return null;
+  return candidate.slice(first, last + 1);
 }
 
 function inferWeekRange(fileName) {
   // Example: 2026_주간업무계획_5월11일~5월15일.pdf
-  const text = String(fileName || "");
-  const yearMatch = text.match(/(20\d{2})/);
-  const y = yearMatch ? Number(yearMatch[1]) : 2026;
-  const rangeMatch = text.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
+  const name = String(fileName || "");
+  const yearMatch = name.match(/(20\d{2})/);
+  const year = yearMatch ? Number(yearMatch[1]) : 2026;
+  const rangeMatch = name.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
   if (!rangeMatch) return null;
   return {
-    year: y,
+    year,
     startMonth: Number(rangeMatch[1]),
     startDay: Number(rangeMatch[2]),
     endMonth: Number(rangeMatch[3]),
@@ -59,21 +70,22 @@ function inferWeekRange(fileName) {
 
 function weekdayFromDate(year, month, day) {
   const d = new Date(year, month - 1, day);
-  // 0:일, 1:월 ... 6:토
-  const map = ["일", "월", "화", "수", "목", "금", "토"];
-  return map[d.getDay()];
+  const names = ["일", "월", "화", "수", "목", "금", "토"];
+  return names[d.getDay()];
 }
 
-function splitBlocksByDateMarker(lines) {
-  // The attached PDF uses markers like "" then date number line.
+function splitBlocks(lines) {
+  // Supports:
+  // - marker line then date number line
+  // - bare date number line
   const blocks = [];
   let currentDate = null;
   let currentLines = [];
-  let waitingDateNumber = false;
+  let waitDate = false;
 
   const flush = () => {
     if (currentDate && currentLines.length) {
-      blocks.push({ dateNumber: currentDate, lines: currentLines.slice() });
+      blocks.push({ date: currentDate, lines: currentLines.slice() });
     }
     currentDate = null;
     currentLines = [];
@@ -83,53 +95,62 @@ function splitBlocksByDateMarker(lines) {
     const line = String(lines[i] || "").trim();
     if (!line) continue;
 
+    const bareDateMatch = line.match(/^(\d{1,2})$/);
+    if (bareDateMatch) {
+      const n = Number(bareDateMatch[1]);
+      if (n >= 1 && n <= 31) {
+        flush();
+        currentDate = n;
+        waitDate = false;
+        continue;
+      }
+    }
+
     if (line.includes("")) {
       flush();
-      waitingDateNumber = true;
+      waitDate = true;
       continue;
     }
 
-    if (waitingDateNumber) {
+    if (waitDate) {
       const n = Number(line.replace(/[^\d]/g, ""));
-      if (Number.isFinite(n) && n > 0 && n <= 31) {
+      if (Number.isFinite(n) && n >= 1 && n <= 31) {
         currentDate = n;
-        waitingDateNumber = false;
+        waitDate = false;
         continue;
       }
-      // if marker detection failed, keep waiting state off and continue normally
-      waitingDateNumber = false;
+      waitDate = false;
     }
 
-    if (currentDate !== null) {
-      currentLines.push(line);
-    }
+    if (currentDate !== null) currentLines.push(line);
   }
+
   flush();
   return blocks;
 }
 
-function buildDayFixedPrompt(dayKor, dateNumber, lines) {
+function dayPrompt(dayKor, date, blockLines) {
   return [
-    "You are parsing one single weekday block from a Korean school weekly task PDF.",
-    `This block is fixed to: ${dayKor}요일 (${dateNumber}일)`,
+    "You are parsing one weekday block from a Korean school weekly task PDF.",
+    `This block is fixed: ${dayKor}요일 (${date}일).`,
     "",
     "Rules:",
     "1) A task starts with '❍'.",
-    "2) If one line has multiple tasks like '❍A❍B', split them.",
-    "3) Hyphen lines (-시간, -기간, -담당, -장소...) belong to the nearest previous task.",
-    "4) Wrapped continuation lines without '❍' should be attached to the previous task.",
-    "5) Do not create tasks from pure detail lines.",
+    "2) One line can contain multiple tasks: '❍A❍B' -> split.",
+    "3) '-시간/-기간/-담당/-대상/-장소/-참석/-내용' lines belong to previous task.",
+    "4) Wrapped continuation lines without '❍' should be appended to previous task.",
+    "5) Do not emit pure detail lines as standalone tasks.",
     "",
-    "Output STRICT JSON ONLY:",
+    "Return STRICT JSON only:",
     "{\"tasks\":[{\"task\":\"string\",\"details\":[\"string\"]}]}",
     "",
     "Block lines:",
-    ...lines
+    ...blockLines
   ].join("\n");
 }
 
 async function callGemini(apiKey, prompt) {
-  const response = await fetch(
+  const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
     {
       method: "POST",
@@ -141,19 +162,16 @@ async function callGemini(apiKey, prompt) {
     }
   );
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Gemini API error: ${errText}`);
+  if (!resp.ok) {
+    const text = await resp.text();
+    throw new Error(`Gemini API error: ${text}`);
   }
 
-  const data = await response.json();
-  const modelText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  const first = modelText.indexOf("{");
-  const last = modelText.lastIndexOf("}");
-  if (first < 0 || last <= first) {
-    throw new Error("Gemini response did not contain JSON.");
-  }
-  return JSON.parse(modelText.slice(first, last + 1));
+  const data = await resp.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const json = extractJson(text);
+  if (!json) throw new Error("Gemini response did not contain valid JSON.");
+  return JSON.parse(json);
 }
 
 module.exports = async (req, res) => {
@@ -186,36 +204,37 @@ module.exports = async (req, res) => {
 
   try {
     const week = inferWeekRange(fileName);
-    const blocks = splitBlocksByDateMarker(lines);
+    const blocks = splitBlocks(lines);
     if (!week || !blocks.length) {
-      res.status(422).json({ error: "Could not detect day blocks from PDF." });
+      res.status(422).json({ error: "PDF에서 날짜 블록(예: 11,12,13...)을 찾지 못했습니다." });
       return;
     }
 
-    const allTasks = [];
+    const collected = [];
     for (const block of blocks) {
-      const dayKor = weekdayFromDate(week.year, week.startMonth, block.dateNumber);
-      if (!WEEKDAY_SET.has(dayKor)) continue; // skip weekend blocks (e.g. 16일 토요일)
-      const prompt = buildDayFixedPrompt(dayKor, block.dateNumber, block.lines);
-      const parsed = await callGemini(apiKey, prompt);
+      const day = weekdayFromDate(week.year, week.startMonth, block.date);
+      if (!WEEKDAYS.includes(day)) continue;
+
+      const parsed = await callGemini(apiKey, dayPrompt(day, block.date, block.lines));
       const tasks = Array.isArray(parsed.tasks) ? parsed.tasks : [];
-      for (const task of tasks) {
-        allTasks.push({
-          day: dayKor,
-          task: String(task.task || "").trim(),
-          details: Array.isArray(task.details) ? task.details.map((d) => String(d).trim()).filter(Boolean) : []
+
+      for (const t of tasks) {
+        collected.push({
+          day,
+          task: String(t.task || "").trim(),
+          details: Array.isArray(t.details) ? t.details.map((d) => String(d).trim()).filter(Boolean) : []
         });
       }
     }
 
-    const cleaned = cleanAndMergeTasks(allTasks);
-    if (!cleaned.length) {
-      res.status(422).json({ error: "Gemini parsed 0 tasks after cleanup." });
+    const tasks = cleanTasks(collected);
+    if (!tasks.length) {
+      res.status(422).json({ error: "업무 추출 결과가 비어 있습니다." });
       return;
     }
 
-    res.status(200).json({ tasks: cleaned });
-  } catch (error) {
-    res.status(500).json({ error: error.message || "Server error while parsing PDF." });
+    res.status(200).json({ tasks });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Server error while parsing PDF." });
   }
 };
