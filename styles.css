@@ -1,0 +1,726 @@
+:root {
+  color-scheme: light;
+  --ink: #1e2733;
+  --muted: #667085;
+  --line: #d8dee7;
+  --panel: #ffffff;
+  --canvas: #f6f7f4;
+  --navy: #26364a;
+  --green: #3f7b63;
+  --mint: #dff0e6;
+  --gold: #f0c36a;
+  --rose: #d7626f;
+  --blue: #5d7fa6;
+  --shadow: 0 18px 48px rgba(31, 39, 51, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: Inter, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.hero {
+  min-height: 72vh;
+  display: flex;
+  flex-direction: column;
+  padding: 18px clamp(18px, 4vw, 56px) 44px;
+  background: #1f2b38;
+  color: #fff;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-bottom: auto;
+}
+
+.topbar a {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+}
+
+.hero-grid {
+  width: min(1180px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  gap: 28px;
+  align-items: end;
+  margin: 13vh auto 0;
+}
+
+.eyebrow,
+.section-kicker {
+  margin: 0 0 8px;
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero .eyebrow,
+.hero .section-kicker {
+  color: var(--gold);
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: anywhere;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(3.8rem, 10vw, 8.8rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 2vw, 2rem);
+  letter-spacing: 0;
+}
+
+h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.hero-text {
+  max-width: 620px;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 1.12rem;
+}
+
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.hero-meta span,
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: var(--mint);
+  color: #1d4f3b;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.hero-meta span {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.teacher-card,
+.panel,
+.quick-link {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.teacher-card {
+  padding: 24px;
+  color: var(--ink);
+}
+
+.teacher-card dl {
+  display: grid;
+  gap: 12px;
+  margin: 20px 0 0;
+}
+
+.teacher-card div {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+}
+
+dt {
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+dd {
+  margin: 0;
+  font-weight: 800;
+}
+
+main {
+  width: min(1180px, calc(100% - 32px));
+  margin: -28px auto 0;
+}
+
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.quick-link {
+  min-height: 94px;
+  padding: 18px;
+  transition: transform 160ms ease, border-color 160ms ease;
+}
+
+.quick-link:hover,
+.quick-link:focus-visible {
+  border-color: var(--green);
+  transform: translateY(-3px);
+}
+
+.quick-link span {
+  color: var(--rose);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.quick-link strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 1.08rem;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.secondary {
+  align-items: start;
+}
+
+.panel {
+  min-width: 0;
+  padding: 20px;
+}
+
+.wide {
+  grid-column: span 2;
+}
+
+.panel-head,
+.section-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.muted {
+  background: #eef1f5;
+  color: var(--muted);
+}
+
+.task-list,
+.compact-list,
+.duty-steps,
+.roster-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.task-list li,
+.compact-list li,
+.duty-steps li {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.task-list li.is-highlight,
+.compact-list li:first-child {
+  border-color: rgba(215, 98, 111, 0.44);
+  background: #fff4f3;
+}
+
+.task-time {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.duty-card {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.duty-pair {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.duty-pair span {
+  border-radius: 999px;
+  padding: 8px 13px;
+  background: var(--navy);
+  color: #fff;
+  font-weight: 800;
+}
+
+.assignment-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.assignment {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--green);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.assignment strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.assignment span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.content-band {
+  margin-top: 16px;
+  padding: 24px 0;
+}
+
+.manager-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.manager-head input,
+.manager-head select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+
+.manager-help {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.plan-status {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f7faf8;
+  padding: 10px 12px;
+  font-weight: 700;
+}
+
+.plan-tasks {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plan-day {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.plan-day h3 {
+  margin-bottom: 10px;
+}
+
+.plan-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  margin-bottom: 8px;
+}
+
+.plan-item span {
+  font-size: 0.92rem;
+}
+
+.empty-day {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.timetable {
+  display: grid;
+  grid-template-columns: 74px repeat(5, 1fr);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: auto;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.time-cell {
+  min-width: 112px;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 9px;
+  text-align: center;
+}
+
+.time-cell.head {
+  background: var(--navy);
+  color: #fff;
+  font-weight: 800;
+}
+
+.time-cell.period {
+  background: #eef3ee;
+  color: #24523d;
+  font-weight: 800;
+}
+
+.time-cell.current {
+  background: #fff1c7;
+  font-weight: 900;
+}
+
+.seating-chart {
+  display: grid;
+  grid-template-columns: 70px repeat(8, minmax(58px, 1fr)) 70px;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.seat,
+.fixture {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 7px;
+  text-align: center;
+  font-weight: 800;
+}
+
+.seat {
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.fixture {
+  background: #e8edf4;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.empty-seat {
+  background: transparent;
+  border: 1px dashed #d5dbe4;
+}
+
+.roles-list,
+.study-groups,
+.notice-list {
+  display: grid;
+  gap: 10px;
+}
+
+.role-item,
+.study-item,
+.notice-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfd;
+}
+
+.role-item p,
+.study-item p,
+.notice-item p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.roster-list {
+  counter-reset: roster;
+}
+
+.roster-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 7px 0;
+}
+
+.roster-list li span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+footer {
+  width: min(1180px, calc(100% - 32px));
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin: 28px auto;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+footer a {
+  color: var(--green);
+  font-weight: 800;
+}
+
+@media (max-width: 920px) {
+  .hero-grid,
+  .dashboard-grid,
+  .quick-links {
+    grid-template-columns: 1fr;
+  }
+
+  .wide {
+    grid-column: auto;
+  }
+
+  .assignment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plan-tasks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .hero {
+    min-height: auto;
+  }
+
+  .topbar {
+    justify-content: flex-start;
+  }
+
+  .teacher-card div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  main {
+    width: min(100% - 20px, 1180px);
+  }
+
+  .assignment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-head,
+  .plan-tasks {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 16px;
+  }
+
+  .seating-chart {
+    grid-template-columns: 58px repeat(8, 72px) 58px;
+  }
+}
+
+body.tv-screen {
+  overflow: hidden;
+  height: 100vh;
+}
+
+body.tv-screen .hero {
+  min-height: auto;
+  height: 22vh;
+  padding: 12px 22px 12px;
+}
+
+body.tv-screen .hero-grid {
+  margin: 0 auto;
+  height: 100%;
+  align-items: center;
+}
+
+body.tv-screen .topbar {
+  margin-bottom: 8px;
+}
+
+body.tv-screen h1 {
+  font-size: clamp(2.1rem, 3.6vw, 3.8rem);
+  line-height: 1;
+}
+
+body.tv-screen .hero-text {
+  margin-top: 10px;
+  font-size: clamp(0.92rem, 1.3vw, 1.2rem);
+}
+
+body.tv-screen .teacher-card {
+  padding: 14px;
+}
+
+body.tv-screen .teacher-card dl {
+  margin-top: 8px;
+  gap: 6px;
+}
+
+body.tv-screen .tv-main {
+  width: min(98vw, 1920px);
+  height: 72vh;
+  margin-top: 6px;
+  display: grid;
+  grid-template-rows: 1fr 1fr 0.82fr;
+  gap: 10px;
+}
+
+body.tv-screen .quick-links {
+  margin-bottom: 2px;
+  gap: 8px;
+}
+
+body.tv-screen .quick-link {
+  min-height: 58px;
+  padding: 9px 12px;
+}
+
+body.tv-screen .quick-link strong {
+  font-size: 0.95rem;
+}
+
+body.tv-screen .tv-top,
+body.tv-screen .tv-middle,
+body.tv-screen .tv-bottom {
+  margin-top: 0;
+}
+
+body.tv-screen .panel {
+  padding: 12px;
+  min-height: 0;
+}
+
+body.tv-screen .panel-head {
+  margin-bottom: 8px;
+}
+
+body.tv-screen .panel h2 {
+  font-size: clamp(1.05rem, 1.4vw, 1.35rem);
+}
+
+body.tv-screen .section-kicker {
+  margin-bottom: 4px;
+  font-size: 0.68rem;
+}
+
+body.tv-screen .assignment-grid {
+  max-height: 22vh;
+  overflow: hidden;
+}
+
+body.tv-screen .task-list,
+body.tv-screen .compact-list,
+body.tv-screen .roster-list,
+body.tv-screen .assignment-grid {
+  overflow: hidden;
+}
+
+body.tv-screen .task-list li,
+body.tv-screen .compact-list li,
+body.tv-screen .assignment,
+body.tv-screen .roster-list li {
+  padding: 8px;
+}
+
+body.tv-screen .task-time {
+  font-size: 0.75rem;
+}
+
+body.tv-screen footer {
+  margin: 6px auto;
+  font-size: 0.78rem;
+}
+
+body.management-screen .hero {
+  min-height: auto;
+  height: 20vh;
+  padding: 10px clamp(16px, 3vw, 32px);
+}
+
+body.management-screen .hero-grid {
+  margin: 0 auto;
+  height: 100%;
+  align-items: center;
+}
+
+body.management-screen h1 {
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+body.management-screen .hero-text {
+  margin-top: 8px;
+  font-size: clamp(0.9rem, 1.2vw, 1rem);
+}
+
+body.management-screen main {
+  margin-top: 0;
+}

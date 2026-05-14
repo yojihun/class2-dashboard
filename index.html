@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>2반 학급 대시보드</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="tv-screen">
+    <header class="hero">
+      <nav class="topbar" aria-label="주요 메뉴">
+        <a href="#today">오늘 일정</a>
+        <a href="#duties">주번</a>
+        <a href="#cleaning">청소</a>
+        <a href="#class-info">학급 정보</a>
+        <a href="management.html">관리</a>
+      </nav>
+      <div class="hero-grid">
+        <section class="hero-copy">
+          <p class="eyebrow">미림마이스터고</p>
+          <h1>2반 학급 대시보드</h1>
+          <p class="hero-text">관리 시스템에서 체크한 항목을 기준으로 오늘의 학급 일정을 자동 표시합니다.</p>
+          <div class="hero-meta">
+            <span id="live-date">날짜 불러오는 중...</span>
+            <span id="school-day">요일 불러오는 중...</span>
+          </div>
+        </section>
+        <section class="teacher-card">
+          <p class="section-kicker">담임 선생님</p>
+          <h2>김지훈 선생님</h2>
+          <dl>
+            <div><dt>담당 교과</dt><dd>영어</dd></div>
+            <div><dt>교무실</dt><dd>3층 교사연구실 4</dd></div>
+            <div><dt>연락처</dt><dd><a href="tel:01094351270">010-9435-1270</a></dd></div>
+            <div><dt>Instagram</dt><dd><a href="https://www.instagram.com/ur.friend.jihoon" target="_blank" rel="noreferrer">@ur.friend.jihoon</a></dd></div>
+          </dl>
+        </section>
+      </div>
+    </header>
+
+    <main class="tv-main">
+      <section class="quick-links">
+        <a class="quick-link" href="https://forms.gle/XaJFMDDVPiBCgqVUA" target="_blank" rel="noreferrer"><span>자기 성찰</span><strong>학급 활동 자기 성찰 노트</strong></a>
+        <a class="quick-link" href="https://quizn.show/pbd/info/board/0835045" target="_blank" rel="noreferrer"><span>의견</span><strong>건의함</strong></a>
+        <a class="quick-link" href="https://quizn.show/pbd/info/board/0884859" target="_blank" rel="noreferrer"><span>상담</span><strong>익명상담 게시판</strong></a>
+      </section>
+
+      <section id="today" class="dashboard-grid tv-top">
+        <article class="panel"><div class="panel-head"><div><p class="section-kicker">실시간</p><h2>오늘의 일정</h2></div></div><ul id="today-list" class="task-list"></ul></article>
+        <article class="panel"><div class="panel-head"><div><p class="section-kicker">다가오는 일정</p><h2>예정된 항목</h2></div></div><ul id="upcoming-list" class="compact-list"></ul></article>
+        <article id="duties" class="panel"><div class="panel-head"><div><p class="section-kicker">순환</p><h2>주간 주번</h2></div></div><div id="duty-card" class="duty-card"></div></article>
+      </section>
+
+      <section id="cleaning" class="dashboard-grid secondary tv-middle">
+        <article class="panel wide">
+          <div class="panel-head"><div><p class="section-kicker">2주 교체</p><h2>청소 분담</h2></div><span id="cleaning-period" class="badge muted">기간 계산 중...</span></div>
+          <div id="cleaning-grid" class="assignment-grid"></div>
+        </article>
+      </section>
+
+      <section id="class-info" class="dashboard-grid secondary tv-bottom">
+        <article class="panel"><div class="panel-head"><div><p class="section-kicker">명렬</p><h2>우리반 학생</h2></div></div><ol id="roster-list" class="roster-list"></ol></article>
+      </section>
+    </main>
+
+    <footer>
+      <span>일정 관리는 관리 페이지에서 설정합니다.</span>
+      <a href="management.html">관리 페이지 열기</a>
+    </footer>
+    <script src="dashboard.js"></script>
+  </body>
+</html>
