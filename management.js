@@ -263,7 +263,7 @@ async function parseWithServer(lines, items, dayBlocks, fileName) {
   const response = await fetch("/api/parse-weekly-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName, lines, items, dayBlocks })
+    body: JSON.stringify({ fileName: normalize(fileName), lines, dayBlocks })
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: "Gemini 파서 실패" }));
@@ -290,7 +290,8 @@ async function handleUpload(event) {
       const parsed = await parseWithServer(lines, items, dayBlocks, file.name);
       tasks = parsed.tasks;
       parserName = parsed.parserName;
-    } catch {
+    } catch (error) {
+      if (dayBlocks.length) throw error;
       tasks = parsePdfLocally(lines);
     }
     if (!tasks.length) throw new Error("요일별 업무 항목을 찾지 못했습니다.");

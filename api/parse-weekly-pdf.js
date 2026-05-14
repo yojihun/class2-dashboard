@@ -424,12 +424,6 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const range = inferRange(fileName);
-  if (!range) {
-    res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
-    return;
-  }
-
   if (dayBlocks.length) {
     try {
       const collected = [];
@@ -455,6 +449,12 @@ module.exports = async (req, res) => {
       res.status(200).json({ tasks, parser: "day-blocks-local" });
       return;
     }
+  }
+
+  const range = inferRange(fileName);
+  if (!range) {
+    res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
+    return;
   }
 
   if (positionedItems.length) {
