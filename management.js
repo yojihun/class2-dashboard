@@ -32,14 +32,21 @@ function normalize(text) {
 }
 
 function detectDay(line) {
-  const match = normalize(line).match(/^(월|화|수|목|금)\s*[\.:]?\s*(\d{1,2})?/);
-  return match ? WEEKDAY_TO_INDEX[match[1]] : null;
+  const text = normalize(line);
+  const startMatch = text.match(/^(월|화|수|목|금)\s*[\.:]?\s*(\d{1,2})?/);
+  if (startMatch) return WEEKDAY_TO_INDEX[startMatch[1]];
+
+  const innerMatch = text.match(/(?:\(|\[)?(월|화|수|목|금)(?:\)|\])?\s*(?:요일)?/);
+  if (innerMatch) return WEEKDAY_TO_INDEX[innerMatch[1]];
+  return null;
 }
 
 function parsePdfLocally(lines) {
   const tasks = [];
   let dayIndex = null;
   let currentTask = null;
+  const taskStartPattern = /[❍○◦●▪□■]/;
+  const detailPrefixPattern = /^[-–—]\s*/;
 
   const flush = () => {
     if (!currentTask || !currentTask.title) return;
@@ -64,21 +71,33 @@ function parsePdfLocally(lines) {
     }
     if (!dayIndex) continue;
 
-    if (line.includes("❍")) {
+    if (taskStartPattern.test(line)) {
       flush();
       currentTask = {
         dayIndex,
-        title: line.replace(/^.*?❍\s*/, "").trim(),
+        title: line.replace(/^.*?[❍○◦●▪□■]\s*/, "").trim(),
         details: []
       };
       continue;
     }
-    if (!currentTask) continue;
+    if (!currentTask) {
+      // Fallback: if we are in a day block and see meaningful content, treat it as a task.
+      if (line.length >= 6 && !/^(담당|부서|비고|일정|주간업무|업무계획)$/i.test(line)) {
+        currentTask = { dayIndex, title: line, details: [] };
+      }
+      continue;
+    }
 
-    if (line.startsWith("-")) {
-      currentTask.details.push(line.replace(/^-+\s*/, "").trim());
+    if (detailPrefixPattern.test(line) || /^시간[:：]/.test(line) || /^기간[:：]/.test(line) || /^담당[:：]/.test(line)) {
+      currentTask.details.push(line.replace(detailPrefixPattern, "").trim());
     } else {
-      currentTask.details.push(line);
+      // If a long sentence appears, it's likely a new task line in some PDF layouts.
+      if (line.length >= 12 && currentTask.details.length >= 1) {
+        flush();
+        currentTask = { dayIndex, title: line, details: [] };
+      } else {
+        currentTask.details.push(line);
+      }
     }
   }
 
