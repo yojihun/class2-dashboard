@@ -107,9 +107,18 @@ function parsePdfLocally(lines) {
 
 function mapGeminiTasks(rawTasks) {
   if (!Array.isArray(rawTasks)) return [];
+  const mapDay = (value) => {
+    const day = String(value || "").trim();
+    if (day.startsWith("월")) return 1;
+    if (day.startsWith("화")) return 2;
+    if (day.startsWith("수")) return 3;
+    if (day.startsWith("목")) return 4;
+    if (day.startsWith("금")) return 5;
+    return 0;
+  };
   return rawTasks
     .map((item) => {
-      const dayIndex = WEEKDAY_TO_INDEX[item.day];
+      const dayIndex = mapDay(item.day);
       if (!dayIndex || !item.task) return null;
       const details = Array.isArray(item.details) ? item.details.filter(Boolean) : [];
       return {

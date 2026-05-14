@@ -1,4 +1,4 @@
-const WEEKDAYS = ["월", "화", "수", "목", "금"];
+const WEEKDAY_SET = new Set(["월", "화", "수", "목", "금"]);
 
 function extractJson(text) {
   if (!text) return null;
@@ -10,15 +10,59 @@ function extractJson(text) {
   return candidate.slice(first, last + 1);
 }
 
+function normalizeDay(day) {
+  const value = String(day || "").trim();
+  if (!value) return "";
+  if (value.startsWith("월")) return "월";
+  if (value.startsWith("화")) return "화";
+  if (value.startsWith("수")) return "수";
+  if (value.startsWith("목")) return "목";
+  if (value.startsWith("금")) return "금";
+  return "";
+}
+
 function normalizeTasks(tasks) {
   if (!Array.isArray(tasks)) return [];
   return tasks
-    .map((t) => ({
-      day: typeof t.day === "string" ? t.day.trim() : "",
-      task: typeof t.task === "string" ? t.task.trim() : "",
-      details: Array.isArray(t.details) ? t.details.map((d) => String(d).trim()).filter(Boolean) : []
-    }))
-    .filter((t) => WEEKDAYS.includes(t.day) && t.task);
+    .map((task) => {
+      const day = normalizeDay(task.day);
+      const title = String(task.task || "").trim();
+      const details = Array.isArray(task.details)
+        ? task.details.map((d) => String(d).trim()).filter(Boolean)
+        : [];
+      return { day, task: title, details };
+    })
+    .filter((t) => WEEKDAY_SET.has(t.day) && t.task.length > 0);
+}
+
+function buildPrompt(fileName, lines) {
+  return [
+    "You are an expert parser for Korean school weekly task PDFs.",
+    `File name: ${fileName}`,
+    "",
+    "Goal:",
+    "Convert the whole document into a clean list of tasks by weekday (월~금).",
+    "",
+    "Important structure rules from this document type:",
+    "1) A task starts with the bullet symbol '❍'.",
+    "2) One line can contain multiple tasks: e.g. '❍A❍B'. Split them into separate tasks.",
+    "3) Detail lines after a task (usually starting with '-') belong to the latest task.",
+    "4) Some task titles wrap to the next line without a bullet. Attach wrapped lines to the previous task.",
+    "5) Week/day block markers may appear as special symbols or standalone date numbers. Infer weekday robustly from nearby context.",
+    "6) Ignore department headers and decorative markers.",
+    "",
+    "Output format (STRICT JSON ONLY, no markdown):",
+    "{\"tasks\":[{\"day\":\"월|화|수|목|금\",\"task\":\"string\",\"details\":[\"string\", \"...\"]}]}",
+    "",
+    "Output quality requirements:",
+    "- Every task must have day + task.",
+    "- Keep details concise and clean.",
+    "- Do not merge unrelated tasks.",
+    "- Preserve all actionable tasks.",
+    "",
+    "PDF lines:",
+    ...lines
+  ].join("\n");
 }
 
 module.exports = async (req, res) => {
@@ -33,7 +77,15 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : req.body || {};
+  let body = req.body || {};
+  if (typeof body === "string") {
+    try {
+      body = JSON.parse(body || "{}");
+    } catch {
+      body = {};
+    }
+  }
+
   const fileName = body.fileName || "weekly-plan.pdf";
   const lines = Array.isArray(body.lines) ? body.lines : [];
   if (!lines.length) {
@@ -41,19 +93,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  const prompt = [
-    "You are parsing Korean teacher weekly task PDFs.",
-    `File: ${fileName}`,
-    "Rules:",
-    "1) A row beginning with weekday + date like '월 11' indicates the day block.",
-    "2) The symbol '❍' starts a task.",
-    "3) Following lines like '-시간', '-기간', '-담당' belong to that task as details.",
-    "4) Output STRICT JSON only: {\"tasks\":[{\"day\":\"월|화|수|목|금\",\"task\":\"...\",\"details\":[\"...\"]}]}",
-    "5) Do not include explanations.",
-    "",
-    "PDF lines:",
-    ...lines
-  ].join("\n");
+  const prompt = buildPrompt(fileName, lines);
 
   try {
     const response = await fetch(
@@ -63,7 +103,10 @@ module.exports = async (req, res) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json"
+          }
         })
       }
     );
@@ -76,14 +119,19 @@ module.exports = async (req, res) => {
 
     const data = await response.json();
     const modelText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const jsonPayload = extractJson(modelText);
-    if (!jsonPayload) {
+    const jsonText = extractJson(modelText);
+    if (!jsonText) {
       res.status(502).json({ error: "Gemini response did not contain valid JSON." });
       return;
     }
 
-    const parsed = JSON.parse(jsonPayload);
+    const parsed = JSON.parse(jsonText);
     const tasks = normalizeTasks(parsed.tasks);
+    if (!tasks.length) {
+      res.status(422).json({ error: "Gemini parsed 0 tasks. Please retry with the same file." });
+      return;
+    }
+
     res.status(200).json({ tasks });
   } catch (error) {
     res.status(500).json({ error: error.message || "Server error while parsing PDF." });
