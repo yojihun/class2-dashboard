@@ -131,34 +131,50 @@ function mapGeminiTasks(rawTasks) {
     .filter(Boolean);
 }
 
-async function extractPdfLines(file) {
+async function extractPdfContent(file) {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const doc = await pdfjsLib.getDocument({ data: bytes }).promise;
   const lines = [];
+  const items = [];
   for (let i = 1; i <= doc.numPages; i += 1) {
     const page = await doc.getPage(i);
+    const viewport = page.getViewport({ scale: 1 });
     const content = await page.getTextContent();
     const text = content.items.map((it) => it.str || "").join(" ");
+    content.items.forEach((it) => {
+      const value = normalize(it.str || "");
+      if (!value || !it.transform) return;
+      items.push({
+        page: i,
+        text: value,
+        x: Number(it.transform[4]) || 0,
+        y: viewport.height - (Number(it.transform[5]) || 0),
+        width: Number(it.width) || 0
+      });
+    });
     text.split(/\s{2,}|\n/).forEach((line) => {
       const n = normalize(line);
       if (n) lines.push(n);
     });
   }
-  return lines;
+  return { lines, items };
 }
 
-async function parseWithGemini(lines, fileName) {
+async function parseWithServer(lines, items, fileName) {
   const response = await fetch("/api/parse-weekly-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName, lines })
+    body: JSON.stringify({ fileName, lines, items })
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: "Gemini 파서 실패" }));
     throw new Error(err.error || "Gemini 파서 실패");
   }
   const data = await response.json();
-  return mapGeminiTasks(data.tasks || []);
+  return {
+    tasks: mapGeminiTasks(data.tasks || []),
+    parserName: data.parser || "server"
+  };
 }
 
 async function handleUpload(event) {
@@ -168,12 +184,13 @@ async function handleUpload(event) {
   status.textContent = "업로드한 PDF를 분석 중입니다...";
 
   try {
-    const lines = await extractPdfLines(file);
+    const { lines, items } = await extractPdfContent(file);
     let tasks = [];
     let parserName = "로컬";
     try {
-      tasks = await parseWithGemini(lines, file.name);
-      parserName = "Gemini";
+      const parsed = await parseWithServer(lines, items, file.name);
+      tasks = parsed.tasks;
+      parserName = parsed.parserName;
     } catch {
       tasks = parsePdfLocally(lines);
     }

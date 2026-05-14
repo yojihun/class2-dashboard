@@ -83,6 +83,139 @@ function splitDateBlocks(lines) {
   return blocks;
 }
 
+function normalizePositionedItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((item) => ({
+      page: Number(item.page) || 1,
+      text: normalizeLine(item.text),
+      x: Number(item.x) || 0,
+      y: Number(item.y) || 0,
+      width: Number(item.width) || 0
+    }))
+    .filter((item) => item.text);
+}
+
+function groupItemsIntoLines(items, tolerance = 4) {
+  const lines = [];
+  const sorted = items.slice().sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+  for (const item of sorted) {
+    let line = lines.find((candidate) => candidate.page === item.page && Math.abs(candidate.y - item.y) <= tolerance);
+    if (!line) {
+      line = { page: item.page, y: item.y, items: [] };
+      lines.push(line);
+    }
+    line.items.push(item);
+    line.y = (line.y * (line.items.length - 1) + item.y) / line.items.length;
+  }
+
+  return lines
+    .map((line) => ({
+      ...line,
+      items: line.items.slice().sort((a, b) => a.x - b.x)
+    }))
+    .sort((a, b) => a.page - b.page || a.y - b.y);
+}
+
+function inferColumnRanges(items, pageWidth) {
+  const headers = ["교무기획부", "교육연구부", "학생안전부", "마이스터기획부", "취업지원부", "상담복지부", "글로벌역량강화부"];
+  const centers = headers
+    .map((header) => {
+      const match = items.find((item) => item.text.includes(header));
+      if (!match) return null;
+      return match.x + match.width / 2;
+    })
+    .filter((value) => Number.isFinite(value))
+    .sort((a, b) => a - b);
+
+  if (centers.length < 5) {
+    return [
+      [0, 151],
+      [151, 267],
+      [267, 380],
+      [380, 493],
+      [493, 604],
+      [604, 720],
+      [720, pageWidth || 850]
+    ];
+  }
+
+  const ranges = [];
+  for (let i = 0; i < centers.length; i += 1) {
+    const left = i === 0 ? 0 : (centers[i - 1] + centers[i]) / 2;
+    const right = i === centers.length - 1 ? pageWidth || centers[i] + 120 : (centers[i] + centers[i + 1]) / 2;
+    ranges.push([left, right]);
+  }
+  return ranges;
+}
+
+function positionedDateMarkers(items, range) {
+  const start = Math.min(range.startDay, range.endDay);
+  const end = Math.max(range.startDay, range.endDay);
+  return items
+    .filter((item) => item.page === 1 && item.x < 70 && item.y > 90 && /^\d{1,2}$/.test(item.text))
+    .map((item) => ({ date: Number(item.text), y: item.y }))
+    .filter((marker) => marker.date >= start && marker.date <= end + 1)
+    .sort((a, b) => a.y - b.y);
+}
+
+function splitPositionedBlocks(items, range) {
+  const markers = positionedDateMarkers(items, range);
+  const validMarkers = markers.filter((marker) => marker.date >= range.startDay && marker.date <= range.endDay);
+  if (!validMarkers.length) return [];
+
+  const pageWidth = Math.max(...items.map((item) => item.x + item.width), 841);
+  const columnRanges = inferColumnRanges(items, pageWidth);
+  const contentLines = groupItemsIntoLines(
+    items.filter((item) => item.page === 1 && item.y > 85 && !/^(\d{1,2}|)$/.test(item.text))
+  );
+  const sectionStarts = [];
+  for (let i = 0; i < contentLines.length; i += 1) {
+    const prev = contentLines[i - 1];
+    if (!prev || contentLines[i].y - prev.y > 10) sectionStarts.push(contentLines[i].y);
+  }
+  if (!sectionStarts.length) return [];
+
+  const allMarkerSections = markers
+    .map((marker) => {
+      const top = sectionStarts.filter((start) => start <= marker.y + 1).at(-1);
+      if (!Number.isFinite(top)) return null;
+      return { ...marker, top };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.top - b.top);
+
+  return validMarkers.map((marker) => {
+    const index = allMarkerSections.findIndex((item) => item.date === marker.date && item.y === marker.y);
+    const current = allMarkerSections[index];
+    if (!current) return null;
+    const top = current.top;
+    const bottom = allMarkerSections[index + 1]?.top || Number.POSITIVE_INFINITY;
+    const bandItems = items.filter((item) => item.page === 1 && item.y >= top && item.y < bottom && !/^(\d{1,2}|)$/.test(item.text));
+    const columnLines = columnRanges.map(([left, right]) => {
+      const columnItems = bandItems.filter((item) => item.x >= left && item.x < right);
+      return groupItemsIntoLines(columnItems)
+        .map((line) => line.items.map((item) => item.text).join(" "))
+        .filter(Boolean);
+    });
+    return { date: marker.date, columnLines };
+  }).filter(Boolean);
+}
+
+function parsePositionedTasks(items, range) {
+  const blocks = splitPositionedBlocks(items, range);
+  const collected = [];
+  for (const block of blocks) {
+    const day = dayFromDate(range.year, range.startMonth, block.date);
+    if (!VALID_WEEKDAYS.has(day)) continue;
+    for (const lines of block.columnLines) {
+      const parsed = parseBlockTasks(lines);
+      for (const task of parsed) collected.push({ day, task: task.task, details: task.details });
+    }
+  }
+  return postClean(collected);
+}
+
 function splitBulletTasks(line) {
   if (!line.includes("❍")) return [];
   return line
@@ -154,6 +287,8 @@ function postClean(tasks) {
     if (!task) continue;
     if (/^\d{1,2}$/.test(task)) continue;
     if (task === "") continue;
+    if (!details.length && /^[가-힣]{3}$/.test(task)) continue;
+    if (!details.length && /^제\s*\d+\s*회$/.test(task)) continue;
     if (DETAIL_PREFIX.test(task) || /^\d{1,2}:\d{2}\s*~/.test(task)) {
       if (merged.length > 0 && merged[merged.length - 1].day === t.day) {
         merged[merged.length - 1].details.push(task.replace(DASH_PREFIX, ""));
@@ -249,8 +384,9 @@ module.exports = async (req, res) => {
 
   const fileName = body.fileName || "weekly-plan.pdf";
   const lines = Array.isArray(body.lines) ? body.lines : [];
-  if (!lines.length) {
-    res.status(400).json({ error: "No PDF lines provided." });
+  const positionedItems = normalizePositionedItems(body.items);
+  if (!lines.length && !positionedItems.length) {
+    res.status(400).json({ error: "No PDF text provided." });
     return;
   }
 
@@ -258,6 +394,14 @@ module.exports = async (req, res) => {
   if (!range) {
     res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
     return;
+  }
+
+  if (positionedItems.length) {
+    const positionedTasks = parsePositionedTasks(positionedItems, range);
+    if (positionedTasks.length) {
+      res.status(200).json({ tasks: positionedTasks, parser: "positioned-local" });
+      return;
+    }
   }
 
   const blocks = splitDateBlocks(lines);
