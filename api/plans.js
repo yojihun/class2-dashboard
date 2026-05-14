@@ -1,4 +1,4 @@
-const { createPlan, listPlans, publishPlan, setActivePlan, toggleTask } = require("./_firestore");
+const { createPlan, listPlans, publishPlan, setActivePlan, toggleTask, updateSettings } = require("./_firestore");
 
 function sendJson(res, status, body) {
   res.status(status).json(body);
@@ -36,6 +36,10 @@ module.exports = async (req, res) => {
       }
       if (body.action === "toggleTask") {
         sendJson(res, 200, await toggleTask(body.planId, body.taskId, body.homeroom));
+        return;
+      }
+      if (body.action === "updateSettings") {
+        sendJson(res, 200, await updateSettings(body.settings || {}));
         return;
       }
       sendJson(res, 400, { error: "Unknown plan action." });

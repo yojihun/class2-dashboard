@@ -4,16 +4,38 @@ const VIEW_ORDER = ["schedule", "duties", "roles", "seating"];
 
 const students = ["고성민", "고희경", "권율", "김규리", "김선민", "박지성", "변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민", "전효민", "조예지", "최승우", "최영민", "한병민", "황수미"];
 const cleaningAssignments = ["쓸기1", "쓸기2", "쓸기3", "바닦1", "바닦2", "휴지통1", "휴지통2", "닦기1", "닦기2", "닦기3", "닦기4", "교탁정리", "꿈담카페1", "꿈담카페2", "꿈담카페3", "2-2계단1", "2-2계단2", "2-2계단3"];
-const individualRoles = [
+const defaultRoles = [
   ["학급 회장", "고성민"], ["학급 부회장", "고희경"], ["출석 확인", "권율"], ["알림장", "김규리"], ["과제 리마인더", "김선민"], ["기자재 점검", "박지성"],
   ["칠판 관리", "변지현"], ["분리수거", "여서정"], ["학습 분위기", "유리한"], ["문단속", "윤규태"], ["환기", "이윤재"], ["사물함 점검", "이현민"],
   ["급식 안내", "전효민"], ["게시판", "조예지"], ["체육 준비", "최승우"], ["도서 관리", "최영민"], ["행사 기록", "한병민"], ["칭찬 릴레이", "황수미"]
 ];
-const seatingRows = [
+const defaultSeatingRows = [
   ["고성민", "고희경", "권율", "김규리", "김선민", "박지성"],
   ["변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민"],
   ["전효민", "조예지", "최승우", "최영민", "한병민", "황수미"]
 ];
+const defaultSettings = {
+  teacher: {
+    name: "김지훈 선생님",
+    subject: "영어",
+    office: "3층 교사연구실 4",
+    phone: "010-9435-1270",
+    instagram: "@ur.friend.jihoon",
+    instagramUrl: "https://www.instagram.com/ur.friend.jihoon"
+  },
+  messages: {
+    teacherTitle: "오늘도 서로의 속도를 지켜주기",
+    teacherBody: "해야 할 일은 분명하게, 말은 다정하게. 2반은 오늘도 충분히 잘 해낼 수 있습니다.",
+    quote: "작은 준비가 하루를 덜 흔들리게 만든다."
+  },
+  quickLinks: [
+    { label: "자기 성찰", url: "https://forms.gle/XaJFMDDVPiBCgqVUA" },
+    { label: "건의함", url: "https://quizn.show/pbd/info/board/0835045" },
+    { label: "익명상담", url: "https://quizn.show/pbd/info/board/0884859" }
+  ],
+  roles: defaultRoles,
+  seatingRows: defaultSeatingRows
+};
 
 const fallbackSchedules = {
   1: [["08:05", "주번 조회"], ["1교시", "자치활동"]],
@@ -23,6 +45,18 @@ const fallbackSchedules = {
   5: [["16:30", "방과후학교 A"], ["종례", "주간 정리"]]
 };
 
+let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
+
+function mergeSettings(settings = {}) {
+  return {
+    teacher: { ...defaultSettings.teacher, ...(settings.teacher || {}) },
+    messages: { ...defaultSettings.messages, ...(settings.messages || {}) },
+    quickLinks: Array.isArray(settings.quickLinks) && settings.quickLinks.length ? settings.quickLinks : defaultSettings.quickLinks,
+    roles: Array.isArray(settings.roles) && settings.roles.length ? settings.roles : defaultSettings.roles,
+    seatingRows: Array.isArray(settings.seatingRows) && settings.seatingRows.length ? settings.seatingRows : defaultSettings.seatingRows
+  };
+}
+
 async function loadState() {
   try {
     const response = await fetch("/api/plans", { cache: "no-store" });
@@ -31,10 +65,11 @@ async function loadState() {
     return {
       plans: Array.isArray(parsed.plans) ? parsed.plans : [],
       activePlanId: parsed.activePlanId || null,
-      publishedPlanId: parsed.publishedPlanId || null
+      publishedPlanId: parsed.publishedPlanId || null,
+      settings: mergeSettings(parsed.settings)
     };
   } catch {
-    return { plans: [], activePlanId: null, publishedPlanId: null };
+    return { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
   }
 }
 
@@ -80,7 +115,7 @@ function formatMonthDay(date) {
 }
 
 function shortName(name) {
-  return name.slice(1);
+  return String(name || "").slice(1) || String(name || "");
 }
 
 function escapeHtml(value) {
@@ -93,9 +128,21 @@ function renderLive() {
   document.querySelector("#school-day").textContent = `${DAY_NAMES[today.getDay()]}요일`;
 }
 
-async function renderSchedule() {
-  const state = await loadState();
-  const plan = resolveDashboardPlan(state);
+function renderSettings() {
+  const { teacher, messages, quickLinks } = dashboardState.settings;
+  document.querySelector("#teacher-message-title").textContent = messages.teacherTitle;
+  document.querySelector("#teacher-message-body").textContent = messages.teacherBody;
+  document.querySelector("#daily-quote").textContent = messages.quote;
+  document.querySelector("#teacher-name").textContent = teacher.name;
+  document.querySelector("#teacher-subject").textContent = teacher.subject || "-";
+  document.querySelector("#teacher-office").textContent = teacher.office || "-";
+  document.querySelector("#teacher-phone").innerHTML = teacher.phone ? `<a href="tel:${escapeHtml(teacher.phone.replace(/[^0-9+]/g, ""))}">${escapeHtml(teacher.phone)}</a>` : "-";
+  document.querySelector("#teacher-instagram").innerHTML = teacher.instagramUrl ? `<a href="${escapeHtml(teacher.instagramUrl)}" target="_blank" rel="noreferrer">${escapeHtml(teacher.instagram || teacher.instagramUrl)}</a>` : escapeHtml(teacher.instagram || "-");
+  document.querySelector("#compact-links").innerHTML = quickLinks.map((link) => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`).join("");
+}
+
+function renderSchedule() {
+  const plan = resolveDashboardPlan(dashboardState);
   const today = getKoreaToday().getDay();
   const homeroomTasks = plan ? plan.tasks.filter((t) => t.homeroom) : [];
   const board = document.querySelector("#schedule-board");
@@ -154,8 +201,8 @@ function renderDutyAndCleaning() {
 }
 
 function renderRoles() {
-  document.querySelector("#roles-list").innerHTML = individualRoles
-    .map(([role, student], index) => `<article class="role-item"><span>${String(index + 1).padStart(2, "0")}</span><strong>${role}</strong><p>${shortName(student)}</p></article>`)
+  document.querySelector("#roles-list").innerHTML = dashboardState.settings.roles
+    .map(([role, student], index) => `<article class="role-item"><span>${String(index + 1).padStart(2, "0")}</span><strong>${escapeHtml(role)}</strong><p>${escapeHtml(shortName(student))}</p></article>`)
     .join("");
 }
 
@@ -163,7 +210,7 @@ function renderSeating() {
   const chart = document.querySelector("#seating-chart");
   chart.innerHTML = `
     <div class="fixture teacher-desk">교탁</div>
-    ${seatingRows.map((row) => `<div class="seat-row">${row.map((name) => `<div class="seat"><span>${shortName(name)}</span></div>`).join("")}</div>`).join("")}
+    ${dashboardState.settings.seatingRows.map((row) => `<div class="seat-row">${row.map((name) => `<div class="seat"><span>${escapeHtml(shortName(name))}</span></div>`).join("")}</div>`).join("")}
     <div class="fixture door-zone">출입문</div>
   `;
 }
@@ -203,7 +250,9 @@ function initViewRotation() {
 
 async function init() {
   renderLive();
-  await renderSchedule();
+  dashboardState = await loadState();
+  renderSettings();
+  renderSchedule();
   renderDutyAndCleaning();
   renderRoles();
   renderSeating();

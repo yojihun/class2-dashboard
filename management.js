@@ -5,8 +5,49 @@ const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
 const DAY_NAMES = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 const DAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
 
-let state = { plans: [], activePlanId: null, publishedPlanId: null };
+const defaultSettings = {
+  teacher: {
+    name: "김지훈 선생님",
+    subject: "영어",
+    office: "3층 교사연구실 4",
+    phone: "010-9435-1270",
+    instagram: "@ur.friend.jihoon",
+    instagramUrl: "https://www.instagram.com/ur.friend.jihoon"
+  },
+  messages: {
+    teacherTitle: "오늘도 서로의 속도를 지켜주기",
+    teacherBody: "해야 할 일은 분명하게, 말은 다정하게. 2반은 오늘도 충분히 잘 해낼 수 있습니다.",
+    quote: "작은 준비가 하루를 덜 흔들리게 만든다."
+  },
+  quickLinks: [
+    { label: "자기 성찰", url: "https://forms.gle/XaJFMDDVPiBCgqVUA" },
+    { label: "건의함", url: "https://quizn.show/pbd/info/board/0835045" },
+    { label: "익명상담", url: "https://quizn.show/pbd/info/board/0884859" }
+  ],
+  roles: [
+    ["학급 회장", "고성민"], ["학급 부회장", "고희경"], ["출석 확인", "권율"], ["알림장", "김규리"], ["과제 리마인더", "김선민"], ["기자재 점검", "박지성"],
+    ["칠판 관리", "변지현"], ["분리수거", "여서정"], ["학습 분위기", "유리한"], ["문단속", "윤규태"], ["환기", "이윤재"], ["사물함 점검", "이현민"],
+    ["급식 안내", "전효민"], ["게시판", "조예지"], ["체육 준비", "최승우"], ["도서 관리", "최영민"], ["행사 기록", "한병민"], ["칭찬 릴레이", "황수미"]
+  ],
+  seatingRows: [
+    ["고성민", "고희경", "권율", "김규리", "김선민", "박지성"],
+    ["변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민"],
+    ["전효민", "조예지", "최승우", "최영민", "한병민", "황수미"]
+  ]
+};
+
+let state = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
 let dirty = false;
+
+function mergeSettings(settings = {}) {
+  return {
+    teacher: { ...defaultSettings.teacher, ...(settings.teacher || {}) },
+    messages: { ...defaultSettings.messages, ...(settings.messages || {}) },
+    quickLinks: Array.isArray(settings.quickLinks) && settings.quickLinks.length ? settings.quickLinks : defaultSettings.quickLinks,
+    roles: Array.isArray(settings.roles) && settings.roles.length ? settings.roles : defaultSettings.roles,
+    seatingRows: Array.isArray(settings.seatingRows) && settings.seatingRows.length ? settings.seatingRows : defaultSettings.seatingRows
+  };
+}
 
 async function apiRequest(path, options = {}) {
   const response = await fetch(path, {
@@ -25,7 +66,9 @@ async function loadStateFromServer() {
   const status = document.querySelector("#plan-status");
   status.textContent = "Firestore에서 주간 계획을 불러오는 중입니다...";
   state = await apiRequest("/api/plans", { cache: "no-store" });
+  state.settings = mergeSettings(state.settings);
   dirty = false;
+  renderSettingsForm();
   renderManager();
 }
 
@@ -373,6 +416,90 @@ function renderPublishedLabel() {
   label.textContent = published ? `현재 반영: ${published.title}` : "현재 반영: 없음";
 }
 
+function rowsToText(rows) {
+  return rows.map((row) => row.join(" | ")).join("\n");
+}
+
+function linksToText(links) {
+  return links.map((link) => `${link.label} | ${link.url}`).join("\n");
+}
+
+function seatingToText(rows) {
+  return rows.map((row) => row.join(", ")).join("\n");
+}
+
+function parsePairLines(value) {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split("|").map((part) => part.trim()))
+    .filter((parts) => parts[0] && parts[1]);
+}
+
+function parseSeatingRows(value) {
+  return String(value || "")
+    .split("\n")
+    .map((line) => line.split(",").map((name) => name.trim()).filter(Boolean))
+    .filter((row) => row.length);
+}
+
+function renderSettingsForm() {
+  const settings = mergeSettings(state.settings);
+  document.querySelector("#teacher-name-input").value = settings.teacher.name;
+  document.querySelector("#teacher-subject-input").value = settings.teacher.subject;
+  document.querySelector("#teacher-office-input").value = settings.teacher.office;
+  document.querySelector("#teacher-phone-input").value = settings.teacher.phone;
+  document.querySelector("#teacher-instagram-input").value = settings.teacher.instagram;
+  document.querySelector("#teacher-instagram-url-input").value = settings.teacher.instagramUrl;
+  document.querySelector("#message-title-input").value = settings.messages.teacherTitle;
+  document.querySelector("#message-body-input").value = settings.messages.teacherBody;
+  document.querySelector("#quote-input").value = settings.messages.quote;
+  document.querySelector("#quick-links-input").value = linksToText(settings.quickLinks);
+  document.querySelector("#roles-input").value = rowsToText(settings.roles);
+  document.querySelector("#seating-input").value = seatingToText(settings.seatingRows);
+  document.querySelector("#settings-status").textContent = "현재 설정을 불러왔습니다.";
+}
+
+function collectSettingsForm() {
+  const quickLinks = parsePairLines(document.querySelector("#quick-links-input").value).map(([label, url]) => ({ label, url }));
+  return {
+    teacher: {
+      name: document.querySelector("#teacher-name-input").value.trim(),
+      subject: document.querySelector("#teacher-subject-input").value.trim(),
+      office: document.querySelector("#teacher-office-input").value.trim(),
+      phone: document.querySelector("#teacher-phone-input").value.trim(),
+      instagram: document.querySelector("#teacher-instagram-input").value.trim(),
+      instagramUrl: document.querySelector("#teacher-instagram-url-input").value.trim()
+    },
+    messages: {
+      teacherTitle: document.querySelector("#message-title-input").value.trim(),
+      teacherBody: document.querySelector("#message-body-input").value.trim(),
+      quote: document.querySelector("#quote-input").value.trim()
+    },
+    quickLinks,
+    roles: parsePairLines(document.querySelector("#roles-input").value),
+    seatingRows: parseSeatingRows(document.querySelector("#seating-input").value)
+  };
+}
+
+async function saveDashboardSettings() {
+  const status = document.querySelector("#settings-status");
+  try {
+    status.textContent = "대시보드 설정을 저장하는 중입니다...";
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "updateSettings", settings: collectSettingsForm() })
+    });
+    state.settings = mergeSettings(state.settings);
+    renderSettingsForm();
+    renderManager();
+    status.textContent = "저장 완료: 대시보드 설정이 반영되었습니다.";
+  } catch (error) {
+    status.textContent = `설정 저장 실패: ${error.message}`;
+  }
+}
+
 function renderManager() {
   const select = document.querySelector("#plan-select");
   const status = document.querySelector("#plan-status");
@@ -434,6 +561,7 @@ function bindEvents() {
   document.querySelector("#weekly-pdf-input").addEventListener("change", handleUpload);
   document.querySelector("#plan-select").addEventListener("change", (e) => setActivePlan(e.target.value));
   document.querySelector("#save-plan-btn").addEventListener("click", savePublishedPlan);
+  document.querySelector("#save-settings-btn").addEventListener("click", saveDashboardSettings);
 }
 
 async function init() {

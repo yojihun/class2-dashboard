@@ -7,39 +7,61 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body class="management-screen">
-    <header class="hero">
+    <header class="hero management-hero">
       <nav class="topbar">
         <a href="index.html">대시보드</a>
       </nav>
       <div class="hero-grid">
         <section class="hero-copy">
           <p class="eyebrow">관리 시스템</p>
-          <h1>주간 업무 관리</h1>
-          <p class="hero-text">주간 업무 PDF를 업로드하고 2반 일정에 반영할 항목을 체크하세요.</p>
+          <h1>대시보드 관리</h1>
+          <p class="hero-text">TV와 모바일 대시보드에 보이는 메시지, 링크, 역할, 자리배치, 주간 일정을 한 곳에서 정리합니다.</p>
         </section>
       </div>
     </header>
 
-    <main>
-      <section class="content-band">
-        <article class="panel">
-          <div class="manager-head">
+    <main class="manager-main">
+      <section class="manager-layout">
+        <article class="panel manager-panel">
+          <div class="section-title"><div><p class="section-kicker">Dashboard</p><h2>대시보드 설정</h2></div></div>
+          <div class="settings-grid">
+            <label>담임 이름<input id="teacher-name-input" type="text"></label>
+            <label>담당 교과<input id="teacher-subject-input" type="text"></label>
+            <label>교무실<input id="teacher-office-input" type="text"></label>
+            <label>연락처<input id="teacher-phone-input" type="text"></label>
+            <label>Instagram 표시<input id="teacher-instagram-input" type="text"></label>
+            <label>Instagram 링크<input id="teacher-instagram-url-input" type="url"></label>
+            <label class="span-2">담임샘 메시지 제목<input id="message-title-input" type="text"></label>
+            <label class="span-2">담임샘 메시지<textarea id="message-body-input" rows="3"></textarea></label>
+            <label class="span-2">오늘의 한마디<input id="quote-input" type="text"></label>
+            <label class="span-2">모바일 링크 <small>한 줄에 하나씩: 이름 | URL</small><textarea id="quick-links-input" rows="4"></textarea></label>
+            <label class="span-2">1인1역할 <small>한 줄에 하나씩: 역할 | 학생이름</small><textarea id="roles-input" rows="8"></textarea></label>
+            <label class="span-2">자리배치 <small>한 줄이 한 줄 좌석입니다. 이름은 쉼표로 구분</small><textarea id="seating-input" rows="5"></textarea></label>
+          </div>
+          <div class="manager-actions compact-actions">
+            <button id="save-settings-btn" type="button">대시보드 설정 저장</button>
+            <span id="settings-status">설정을 불러오는 중입니다...</span>
+          </div>
+        </article>
+
+        <article class="panel manager-panel">
+          <div class="section-title"><div><p class="section-kicker">Weekly PDF</p><h2>주간 일정</h2></div></div>
+          <div class="manager-head slim">
             <input id="weekly-pdf-input" type="file" accept="application/pdf">
             <select id="plan-select" aria-label="주간 계획 선택"></select>
           </div>
-          <div class="manager-actions">
-            <button id="save-plan-btn" type="button">저장(대시보드 반영)</button>
+          <div class="manager-actions compact-actions">
+            <button id="save-plan-btn" type="button">선택 일정 반영</button>
             <span id="published-plan-label">현재 반영: 없음</span>
           </div>
-          <p class="manager-help">파싱 우선순위: `/api/parse-weekly-pdf` Gemini API -> 로컬 파서 순서로 동작합니다.</p>
           <div id="plan-status" class="plan-status">아직 업로드된 주간 업무가 없습니다.</div>
-          <div id="plan-tasks" class="plan-tasks"></div>
+          <div id="plan-tasks" class="plan-tasks compact-plan-tasks"></div>
         </article>
       </section>
     </main>
 
     <footer>
-      <span>여기서 변경한 내용은 로컬 저장소를 통해 대시보드에 즉시 반영됩니다.</span>
+      <span>저장한 내용은 Firestore를 통해 대시보드에 반영됩니다.</span>
       <a href="index.html">대시보드로 이동</a>
     </footer>
     <script type="module" src="management.js"></script>

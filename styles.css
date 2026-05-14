@@ -1579,3 +1579,108 @@ body.management-screen main {
     align-items: flex-start;
   }
 }
+
+/* Management v2: compact control console. */
+.manager-main {
+  width: min(1500px, calc(100% - 32px));
+  margin: -22px auto 0;
+}
+
+.manager-layout {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.manager-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  font-weight: 720;
+}
+
+.settings-grid small {
+  color: var(--ink-subtle);
+  font-weight: 600;
+}
+
+.settings-grid input,
+.settings-grid textarea,
+.manager-head.slim input,
+.manager-head.slim select {
+  width: 100%;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background: var(--surface-2);
+  color: var(--ink);
+  resize: vertical;
+}
+
+.settings-grid textarea {
+  min-height: 92px;
+}
+
+.settings-grid .span-2 {
+  grid-column: span 2;
+}
+
+.manager-head.slim {
+  grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
+  margin-bottom: 0;
+}
+
+.compact-actions {
+  margin-bottom: 0;
+}
+
+.compact-plan-tasks {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 58vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+body.management-screen .hero.management-hero {
+  height: 18vh;
+}
+
+@media (max-width: 1100px) {
+  .manager-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-plan-tasks {
+    max-height: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .manager-main {
+    width: min(100% - 20px, 1500px);
+    margin-top: 10px;
+  }
+
+  .settings-grid,
+  .manager-head.slim,
+  .compact-plan-tasks {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-grid .span-2 {
+    grid-column: auto;
+  }
+}
