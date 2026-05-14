@@ -9,7 +9,7 @@ const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 function normalizeLine(line) {
-  return String(line || "").replace(/\s+/g, " ").trim();
+  return String(line || "").normalize("NFC").replace(/\s+/g, " ").trim();
 }
 
 function inferRange(fileName) {
@@ -216,6 +216,34 @@ function parsePositionedTasks(items, range) {
   return postClean(collected);
 }
 
+function normalizeDayBlocks(dayBlocks) {
+  if (!Array.isArray(dayBlocks)) return [];
+  return dayBlocks
+    .map((block) => {
+      const day = normalizeLine(block.day).slice(0, 1);
+      const columns = Array.isArray(block.columns)
+        ? block.columns.map((column) => (Array.isArray(column) ? column.map(normalizeLine).filter(Boolean) : [])).filter((column) => column.length)
+        : [];
+      return {
+        date: Number(block.date) || 0,
+        day,
+        columns
+      };
+    })
+    .filter((block) => VALID_WEEKDAYS.has(block.day) && block.date && block.columns.length);
+}
+
+function parseDayBlocksLocally(dayBlocks) {
+  const collected = [];
+  for (const block of dayBlocks) {
+    for (const lines of block.columns) {
+      const parsed = parseBlockTasks(lines);
+      for (const task of parsed) collected.push({ day: block.day, task: task.task, details: task.details });
+    }
+  }
+  return postClean(collected);
+}
+
 function splitBulletTasks(line) {
   if (!line.includes("❍")) return [];
   return line
@@ -311,7 +339,10 @@ function extractJson(text) {
   return candidate.slice(first, last + 1);
 }
 
-function geminiBlockPrompt(day, date, lines) {
+function geminiBlockPrompt(day, date, columns) {
+  const columnText = columns
+    .map((lines, index) => [`[부서 컬럼 ${index + 1}]`, ...lines].join("\n"))
+    .join("\n\n");
   return [
     "다음은 학교 주간업무계획 PDF에서 추출한 하루치 날짜 블록입니다.",
     `이 블록의 날짜/요일은 이미 확정되어 있습니다: ${date}일 ${day}요일.`,
@@ -324,17 +355,19 @@ function geminiBlockPrompt(day, date, lines) {
     "3) '-시간', '-기간', '-담당', '-장소', '-대상', '-참석' 등은 직전 업무 상세입니다.",
     "4) 상세 줄 단독을 task로 만들지 마세요.",
     "5) 날짜, 요일, 부서명만 있는 줄은 task로 만들지 마세요.",
-    "텍스트 줄:",
-    ...lines.slice(0, 1500)
+    "6) 서로 다른 부서 컬럼의 업무를 한 업무로 합치지 마세요.",
+    "텍스트:",
+    columnText.slice(0, 12000)
   ].join("\n");
 }
 
-async function parseBlockWithGemini(block, range) {
+async function parseBlockWithGemini(block, range = null) {
   if (!GEMINI_API_KEY) return null;
 
-  const day = dayFromDate(range.year, range.startMonth, block.date);
+  const day = block.day || dayFromDate(range.year, range.startMonth, block.date);
   if (!VALID_WEEKDAYS.has(day)) return [];
-  const prompt = geminiBlockPrompt(day, block.date, block.lines);
+  const columns = block.columns || [block.lines || []];
+  const prompt = geminiBlockPrompt(day, block.date, columns);
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(GEMINI_MODEL)}:generateContent?key=${encodeURIComponent(GEMINI_API_KEY)}`;
   const response = await fetch(url, {
@@ -385,7 +418,8 @@ module.exports = async (req, res) => {
   const fileName = body.fileName || "weekly-plan.pdf";
   const lines = Array.isArray(body.lines) ? body.lines : [];
   const positionedItems = normalizePositionedItems(body.items);
-  if (!lines.length && !positionedItems.length) {
+  const dayBlocks = normalizeDayBlocks(body.dayBlocks);
+  if (!lines.length && !positionedItems.length && !dayBlocks.length) {
     res.status(400).json({ error: "No PDF text provided." });
     return;
   }
@@ -394,6 +428,33 @@ module.exports = async (req, res) => {
   if (!range) {
     res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
     return;
+  }
+
+  if (dayBlocks.length) {
+    try {
+      const collected = [];
+      for (const block of dayBlocks) {
+        const parsed = await parseBlockWithGemini(block);
+        if (parsed) collected.push(...parsed);
+      }
+      const tasks = postClean(collected);
+      if (tasks.length) {
+        res.status(200).json({ tasks, parser: "day-blocks-gemini", model: GEMINI_MODEL });
+        return;
+      }
+    } catch {
+      const tasks = parseDayBlocksLocally(dayBlocks);
+      if (tasks.length) {
+        res.status(200).json({ tasks, parser: "day-blocks-local" });
+        return;
+      }
+    }
+
+    const tasks = parseDayBlocksLocally(dayBlocks);
+    if (tasks.length) {
+      res.status(200).json({ tasks, parser: "day-blocks-local" });
+      return;
+    }
   }
 
   if (positionedItems.length) {

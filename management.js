@@ -3,6 +3,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dis
 
 const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
 const DAY_NAMES = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
+const DAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
 
 let state = { plans: [], activePlanId: null, publishedPlanId: null };
 let dirty = false;
@@ -41,7 +42,105 @@ function setDirty(value) {
 }
 
 function normalize(text) {
-  return String(text || "").replace(/\s+/g, " ").trim();
+  return String(text || "").normalize("NFC").replace(/\s+/g, " ").trim();
+}
+
+function inferRange(fileName) {
+  const name = normalize(fileName);
+  const year = Number((name.match(/(20\d{2})/) || [])[1] || new Date().getFullYear());
+  const match = name.match(/(\d{1,2})월\s*(\d{1,2})일\s*~\s*(\d{1,2})월\s*(\d{1,2})일/);
+  if (!match) return null;
+  return {
+    year,
+    startDay: Number(match[2]),
+    endDay: Number(match[4]),
+    month: Number(match[1])
+  };
+}
+
+function dayFromDate(year, month, day) {
+  return DAY_ORDER[new Date(year, month - 1, day).getDay()];
+}
+
+function groupItemsIntoLines(items, tolerance = 4) {
+  const lines = [];
+  const sorted = items.slice().sort((a, b) => a.page - b.page || a.y - b.y || a.x - b.x);
+  sorted.forEach((item) => {
+    let line = lines.find((candidate) => candidate.page === item.page && Math.abs(candidate.y - item.y) <= tolerance);
+    if (!line) {
+      line = { page: item.page, y: item.y, items: [] };
+      lines.push(line);
+    }
+    line.items.push(item);
+    line.y = (line.y * (line.items.length - 1) + item.y) / line.items.length;
+  });
+  return lines
+    .map((line) => ({ ...line, items: line.items.slice().sort((a, b) => a.x - b.x) }))
+    .sort((a, b) => a.page - b.page || a.y - b.y);
+}
+
+function inferColumnRanges(items) {
+  const headers = ["교무기획부", "교육연구부", "학생안전부", "마이스터기획부", "취업지원부", "상담복지부", "글로벌역량강화부"];
+  const pageWidth = Math.max(...items.map((item) => item.x + item.width), 841);
+  const centers = headers
+    .map((header) => items.find((item) => item.text.includes(header)))
+    .filter(Boolean)
+    .map((item) => item.x + item.width / 2)
+    .sort((a, b) => a - b);
+
+  if (centers.length < 5) return [[0, 151], [151, 267], [267, 380], [380, 493], [493, 604], [604, 720], [720, pageWidth]];
+
+  return centers.map((center, index) => {
+    const left = index === 0 ? 0 : (centers[index - 1] + center) / 2;
+    const right = index === centers.length - 1 ? pageWidth : (center + centers[index + 1]) / 2;
+    return [left, right];
+  });
+}
+
+function buildDayBlocks(items, fileName) {
+  const range = inferRange(fileName);
+  if (!range || !items.length) return [];
+
+  const start = Math.min(range.startDay, range.endDay);
+  const end = Math.max(range.startDay, range.endDay);
+  const markers = items
+    .filter((item) => item.page === 1 && item.x < 70 && item.y > 90 && /^\d{1,2}$/.test(item.text))
+    .map((item) => ({ date: Number(item.text), y: item.y }))
+    .filter((marker) => marker.date >= start && marker.date <= end + 1)
+    .sort((a, b) => a.y - b.y);
+  const validMarkers = markers.filter((marker) => marker.date >= start && marker.date <= end);
+  if (!validMarkers.length) return [];
+
+  const contentLines = groupItemsIntoLines(items.filter((item) => item.page === 1 && item.y > 85 && !/^(\d{1,2}|)$/.test(item.text)));
+  const sectionStarts = contentLines.reduce((starts, line, index) => {
+    const previous = contentLines[index - 1];
+    if (!previous || line.y - previous.y > 10) starts.push(line.y);
+    return starts;
+  }, []);
+  const markerSections = markers
+    .map((marker) => ({ ...marker, top: sectionStarts.filter((startY) => startY <= marker.y + 1).at(-1) }))
+    .filter((marker) => Number.isFinite(marker.top))
+    .sort((a, b) => a.top - b.top);
+  const columnRanges = inferColumnRanges(items);
+
+  return validMarkers
+    .map((marker) => {
+      const index = markerSections.findIndex((item) => item.date === marker.date && item.y === marker.y);
+      const current = markerSections[index];
+      if (!current) return null;
+      const bandItems = items.filter((item) => item.page === 1 && item.y >= current.top && item.y < (markerSections[index + 1]?.top || Infinity) && !/^(\d{1,2}|)$/.test(item.text));
+      const columns = columnRanges.map(([left, right]) =>
+        groupItemsIntoLines(bandItems.filter((item) => item.x >= left && item.x < right))
+          .map((line) => line.items.map((item) => item.text).join(" "))
+          .filter(Boolean)
+      );
+      return {
+        date: marker.date,
+        day: dayFromDate(range.year, range.month, marker.date),
+        columns
+      };
+    })
+    .filter((block) => block && WEEKDAY_TO_INDEX[block.day]);
 }
 
 function detectDay(line) {
@@ -157,14 +256,14 @@ async function extractPdfContent(file) {
       if (n) lines.push(n);
     });
   }
-  return { lines, items };
+  return { lines, items, dayBlocks: buildDayBlocks(items, file.name) };
 }
 
-async function parseWithServer(lines, items, fileName) {
+async function parseWithServer(lines, items, dayBlocks, fileName) {
   const response = await fetch("/api/parse-weekly-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName, lines, items })
+    body: JSON.stringify({ fileName, lines, items, dayBlocks })
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: "Gemini 파서 실패" }));
@@ -184,11 +283,11 @@ async function handleUpload(event) {
   status.textContent = "업로드한 PDF를 분석 중입니다...";
 
   try {
-    const { lines, items } = await extractPdfContent(file);
+    const { lines, items, dayBlocks } = await extractPdfContent(file);
     let tasks = [];
     let parserName = "로컬";
     try {
-      const parsed = await parseWithServer(lines, items, file.name);
+      const parsed = await parseWithServer(lines, items, dayBlocks, file.name);
       tasks = parsed.tasks;
       parserName = parsed.parserName;
     } catch {
