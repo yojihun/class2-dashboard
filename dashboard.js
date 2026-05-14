@@ -2,8 +2,7 @@ const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 const DAY_NAMES_LONG = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 
 const students = ["고성민", "고희경", "권율", "김규리", "김선민", "박지성", "변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민", "전효민", "조예지", "최승우", "최영민", "한병민", "황수미"];
-const dutyRotation = [["고성민", "고희경"], ["최영민", "최승우"], ["김규리", "김선민"], ["유리한", "이윤재"], ["변지현", "한병민"], ["전효민", "황수미"], ["권율", "박지성"], ["여서정", "윤규태"], ["이현민", "조예지"]];
-const cleaningAssignments = ["쓸기 왼쪽", "쓸기 오른쪽", "쓸기 앞/뒤", "바닥 왼쪽", "바닥 오른쪽", "휴지통 1", "휴지통 2", "닦기 1", "닦기 2", "닦기 3", "닦기 4", "교탁 정리", "꿈담카페 1", "꿈담카페 2", "꿈담카페 3", "계단 1", "계단 2", "계단 3"];
+const cleaningAssignments = ["쓸기1", "쓸기2", "쓸기3", "바닦1", "바닦2", "휴지통1", "휴지통2", "닦기1", "닦기2", "닦기3", "닦기4", "교탁정리", "꿈담카페1", "꿈담카페2", "꿈담카페3", "2-2계단1", "2-2계단2", "2-2계단3"];
 
 const fallbackSchedules = {
   1: [["08:05", "주번 조회"], ["1교시", "자치활동"]],
@@ -55,8 +54,22 @@ function addDays(date, days) {
   return copy;
 }
 
-function rotateArray(items, steps) {
-  return items.map((_, index) => items[(index + steps) % items.length]);
+function addWeekdays(date, weekdays) {
+  const copy = new Date(date);
+  let remaining = weekdays;
+  while (remaining > 0) {
+    copy.setDate(copy.getDate() + 1);
+    if (copy.getDay() !== 0 && copy.getDay() !== 6) remaining -= 1;
+  }
+  return copy;
+}
+
+function formatMonthDay(date) {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function shortName(name) {
+  return name.slice(1);
 }
 
 function renderLive() {
@@ -85,7 +98,6 @@ async function renderSchedule() {
     upcomingList.innerHTML = homeroomTasks
       .filter((t) => t.dayIndex >= today)
       .sort((a, b) => a.dayIndex - b.dayIndex)
-      .slice(0, 8)
       .map((task) => `<li><span class="task-time">${DAY_NAMES_LONG[task.dayIndex] || `${task.dayIndex}일`}</span><strong>${task.text}</strong></li>`)
       .join("");
   } else {
@@ -95,19 +107,25 @@ async function renderSchedule() {
 
 function renderDutyAndCleaning() {
   const today = getKoreaToday();
-  const dutyAnchor = new Date("2026-04-27T00:00:00+09:00");
+  const dutyAnchor = new Date("2026-05-11T00:00:00+09:00");
   const dutyWeek = Math.max(0, weeksBetween(dutyAnchor, today));
-  const pair = dutyRotation[dutyWeek % dutyRotation.length];
-  const nextPair = dutyRotation[(dutyWeek + 1) % dutyRotation.length];
-  document.querySelector("#duty-card").innerHTML = `<div class="duty-pair">${pair.map((n) => `<span>${n}</span>`).join("")}</div><p>다음 주: ${nextPair.join(", ")}</p>`;
+  const dutyStart = (dutyWeek * 2) % students.length;
+  const pair = [students[dutyStart], students[(dutyStart + 1) % students.length]];
+  const nextDutyStart = ((dutyWeek + 1) * 2) % students.length;
+  const nextPair = [students[nextDutyStart], students[(nextDutyStart + 1) % students.length]];
+  document.querySelector("#duty-card").innerHTML = `<div class="duty-pair">${pair.map((n) => `<span>${shortName(n)}</span>`).join("")}</div><p>다음 주: ${nextPair.map(shortName).join(", ")}</p>`;
 
-  const cleanAnchor = new Date("2026-05-11T00:00:00+09:00");
-  const cycle = Math.max(0, Math.floor((today - cleanAnchor) / (14 * 24 * 60 * 60 * 1000)));
+  const cleanAnchor = new Date("2026-05-28T00:00:00+09:00");
+  const cycle = Math.max(0, Math.floor((startOfWeek(today) - startOfWeek(cleanAnchor)) / (14 * 24 * 60 * 60 * 1000)));
   const start = addDays(cleanAnchor, cycle * 14);
-  const end = addDays(start, 13);
-  document.querySelector("#cleaning-period").textContent = `${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
-  const rotated = rotateArray(students, cycle);
-  document.querySelector("#cleaning-grid").innerHTML = cleaningAssignments.map((name, idx) => `<div class="assignment"><strong>${name} · ${rotated[idx % rotated.length]}</strong></div>`).join("");
+  const end = addWeekdays(start, 6);
+  document.querySelector("#cleaning-period").textContent = `${formatMonthDay(start)} - ${formatMonthDay(end)}`;
+  document.querySelector("#cleaning-grid").innerHTML = cleaningAssignments
+    .map((name, idx) => {
+      const studentIndex = (idx - cycle * 3 + students.length * 10) % students.length;
+      return `<div class="assignment"><strong>${name}</strong><span>${shortName(students[studentIndex])}</span></div>`;
+    })
+    .join("");
 }
 
 function renderRoster() {
@@ -115,6 +133,7 @@ function renderRoster() {
 }
 
 function autoFlow(selector, step = 1, interval = 2400) {
+  if (window.matchMedia("(max-width: 920px)").matches) return;
   const el = document.querySelector(selector);
   if (!el) return;
   if (el.scrollHeight <= el.clientHeight + 2) return;
@@ -134,7 +153,7 @@ async function init() {
   renderDutyAndCleaning();
   renderRoster();
   autoFlow("#today-list", 1, 2600);
-  autoFlow("#upcoming-list", 1, 2800);
+  autoFlow("#upcoming-list", 1, 4200);
   autoFlow("#cleaning-grid", 1, 2400);
   autoFlow("#roster-list", 1, 2200);
 }

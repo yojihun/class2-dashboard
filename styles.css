@@ -309,6 +309,10 @@ main {
 }
 
 .assignment {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(48px, 0.8fr);
+  align-items: center;
+  gap: 8px;
   border: 1px solid var(--line);
   border-left: 4px solid var(--green);
   border-radius: 8px;
@@ -318,7 +322,7 @@ main {
 
 .assignment strong {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 0;
 }
 
 .assignment span {
@@ -718,6 +722,10 @@ body.tv-screen .task-time {
   font-size: 0.75rem;
 }
 
+body.tv-screen .compact-list {
+  max-height: 100%;
+}
+
 body.tv-screen footer {
   margin: 6px auto;
   font-size: 0.78rem;
@@ -747,4 +755,66 @@ body.management-screen .hero-text {
 
 body.management-screen main {
   margin-top: 0;
+}
+
+@media (max-width: 920px) {
+  body.tv-screen {
+    height: auto;
+    overflow: auto;
+  }
+
+  body.tv-screen .hero {
+    height: auto;
+    min-height: auto;
+    padding: 14px 16px 22px;
+  }
+
+  body.tv-screen .hero-grid {
+    height: auto;
+    align-items: start;
+  }
+
+  body.tv-screen .tv-main {
+    width: min(100% - 20px, 1180px);
+    height: auto;
+    display: block;
+    margin-top: 10px;
+  }
+
+  body.tv-screen .quick-links,
+  body.tv-screen .dashboard-grid {
+    margin-top: 10px;
+  }
+
+  body.tv-screen .task-list,
+  body.tv-screen .compact-list,
+  body.tv-screen .roster-list,
+  body.tv-screen .assignment-grid {
+    max-height: none;
+    overflow: visible;
+  }
+
+  body.tv-screen .assignment-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  body.tv-screen footer {
+    width: min(100% - 20px, 1180px);
+    margin: 18px auto;
+  }
+}
+
+@media (max-width: 620px) {
+  body.tv-screen .teacher-card {
+    display: none;
+  }
+
+  body.tv-screen .quick-links,
+  body.tv-screen .dashboard-grid {
+    gap: 10px;
+  }
+
+  body.tv-screen .assignment-grid {
+    grid-template-columns: 1fr;
+  }
 }
