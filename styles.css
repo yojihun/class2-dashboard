@@ -1135,7 +1135,7 @@ body.manager-locked footer {
 
 .dashboard-shell-hero {
   min-height: auto;
-  padding: 8px 10px 4px;
+  padding: 8px 10px 8px;
 }
 
 .dashboard-hero-grid {
@@ -1169,7 +1169,7 @@ body.manager-locked footer {
   width: 100%;
   min-height: 50px;
   display: grid;
-  grid-template-columns: auto auto auto auto minmax(360px, 1fr);
+  grid-template-columns: minmax(260px, 1.45fr) auto auto auto minmax(360px, 1fr);
   align-items: center;
   column-gap: clamp(18px, 3vw, 46px);
   row-gap: 6px;
@@ -1258,7 +1258,7 @@ body.manager-locked footer {
 .dashboard-stage {
   display: grid;
   grid-template-rows: max-content max-content minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
   max-width: calc(100vw - 24px);
 }
@@ -1366,10 +1366,20 @@ body.manager-locked footer {
 
 .now-panel {
   min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "kicker kicker"
+    "clock status";
+  column-gap: 14px;
+  row-gap: 2px;
   justify-content: flex-start;
-  align-items: flex-start;
-  gap: 3px;
+  align-items: end;
   overflow: hidden;
+}
+
+.now-panel .section-kicker {
+  grid-area: kicker;
 }
 
 .now-clock,
@@ -1378,17 +1388,41 @@ body.manager-locked footer {
 }
 
 .now-clock {
+  grid-area: clock;
   color: var(--amber);
   font-family: var(--font-mono);
-  font-size: 1.64rem;
+  font-size: 1.72rem;
   font-weight: 760;
   line-height: 1;
 }
 
 .now-class {
+  grid-area: status;
+  display: inline-flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 8px;
   color: var(--ink);
-  font-size: 0.82rem;
   font-weight: 700;
+  line-height: 1;
+}
+
+.now-class span {
+  flex: 0 0 auto;
+  color: var(--ink-muted);
+  font-size: 0.86rem;
+  font-weight: 820;
+}
+
+.now-class strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 1.54rem;
+  font-weight: 920;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .view-stage {
@@ -1594,12 +1628,14 @@ body.manager-locked footer {
 .role-board .role-item {
   min-height: 0;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 8px;
-  padding: 14px;
+  grid-template-rows: auto auto;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
 }
 
 .role-board .role-item span {
+  display: none;
   color: var(--ink-subtle);
   font-family: var(--font-mono);
   font-size: 0.72rem;
@@ -1608,7 +1644,7 @@ body.manager-locked footer {
 
 .role-board .role-item strong {
   color: var(--ink);
-  font-size: 1.18rem;
+  font-size: 1.08rem;
   line-height: 1.24;
 }
 
@@ -1620,7 +1656,7 @@ body.manager-locked footer {
   padding: 3px 9px;
   background: var(--primary-soft);
   color: var(--primary);
-  font-size: 1rem;
+  font-size: 0.94rem;
   font-weight: 760;
 }
 
@@ -1675,13 +1711,13 @@ body.manager-locked footer {
 
 @media (min-width: 921px) {
   body.tv-screen .dashboard-shell-hero {
-    height: 7vh;
+    height: auto;
   }
 
   body.tv-screen .dashboard-stage {
     width: min(calc(100vw - 24px), 1920px);
-    height: 91vh;
-    margin-top: 2px;
+    height: calc(100vh - 82px);
+    margin-top: 0;
   }
 
   body.tv-screen footer {
@@ -1696,6 +1732,36 @@ body.manager-locked footer {
 
   body.tv-screen .dashboard-shell-hero {
     padding: 14px 16px 18px;
+  }
+
+  .info-head-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 10px 14px;
+    overflow: visible;
+  }
+
+  .info-head-class,
+  .info-head-schedule {
+    grid-column: 1 / -1;
+  }
+
+  .info-head-class {
+    white-space: normal;
+  }
+
+  .info-head-schedule {
+    justify-content: flex-start;
+    border-top: 1px solid var(--hairline-strong);
+    border-left: 0;
+    padding-top: 8px;
+    padding-left: 0;
+  }
+
+  .daily-timetable-board {
+    justify-content: flex-start;
+    gap: 12px;
+    overflow-x: auto;
   }
 
   .dashboard-tabs {
@@ -1745,7 +1811,7 @@ body.manager-locked footer {
   }
 
   .now-panel {
-    align-items: flex-start;
+    align-items: end;
   }
 
   .view-stage {
@@ -1791,6 +1857,32 @@ body.manager-locked footer {
 }
 
 @media (max-width: 620px) {
+  .info-head-row {
+    grid-template-columns: 1fr;
+  }
+
+  .info-head-date,
+  .info-head-metric {
+    white-space: normal;
+  }
+
+  .info-head-schedule {
+    flex-wrap: wrap;
+  }
+
+  .now-panel {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "kicker"
+      "clock"
+      "status";
+    row-gap: 5px;
+  }
+
+  .now-class strong {
+    font-size: 1.36rem;
+  }
+
   .message-panel h2 {
     font-size: 1.45rem;
   }
@@ -1810,7 +1902,7 @@ body.manager-locked footer {
   body.tv-screen .dashboard-stage {
     display: grid;
     grid-template-rows: max-content max-content minmax(0, 1fr);
-    gap: 10px;
+    gap: 12px;
   }
 
   body.tv-screen .view-stage {
@@ -1862,7 +1954,7 @@ body.manager-locked footer {
   }
 
   body.tv-screen .dashboard-shell-hero {
-    overflow: hidden;
+    overflow: visible;
   }
 }
 

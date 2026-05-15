@@ -300,8 +300,14 @@ function renderNowPanel() {
   });
   const clockEl = document.querySelector("#current-clock");
   const classEl = document.querySelector("#current-class-status");
+  const status = periodInfo(now);
   if (clockEl) clockEl.textContent = clock;
-  if (classEl) classEl.textContent = periodInfo(now);
+  if (classEl) {
+    const match = status.match(/^([0-9]+교시)\s+(.+)$/);
+    classEl.innerHTML = match
+      ? `<span>${escapeHtml(match[1])}</span><strong>${escapeHtml(match[2])}</strong>`
+      : `<strong>${escapeHtml(status)}</strong>`;
+  }
   renderDailyTimetable();
 }
 
