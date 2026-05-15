@@ -332,21 +332,6 @@ main {
   transform: translateX(3px);
 }
 
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
-  margin-top: 14px;
-}
-
-#today.dashboard-grid {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(260px, 1fr);
-}
-
-.secondary {
-  align-items: start;
-}
-
 .panel {
   min-width: 0;
   padding: 24px;
@@ -459,12 +444,14 @@ main {
 .duty-pair {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
 
 .duty-pair span {
-  min-width: 76px;
-  min-height: 54px;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -514,7 +501,7 @@ main {
   justify-self: end;
   border: 1px solid var(--primary-line);
   border-radius: var(--radius-pill);
-  padding: 3px 9px;
+  padding: 4px 11px;
   background: var(--primary-soft);
   color: var(--primary);
   font-size: 0.9rem;
@@ -522,10 +509,6 @@ main {
   white-space: nowrap;
 }
 
-.content-band {
-  margin-top: 16px;
-  padding: 24px 0;
-}
 
 .manager-head {
   display: grid;
@@ -1351,13 +1334,6 @@ body.manager-locked footer {
   padding-bottom: 12px;
 }
 
-.class-row-name {
-  margin: 0 0 4px;
-  color: var(--primary);
-  font-size: 1.46rem;
-  font-weight: 900;
-  line-height: 1;
-}
 
 .message-panel h2 {
   font-size: 1.34rem;
@@ -2015,8 +1991,10 @@ body.manager-locked footer {
 
   .info-head-row {
     grid-template-columns: 1fr;
+    overflow: hidden;
   }
 
+  .info-head-class,
   .info-head-date,
   .info-head-metric {
     white-space: normal;
@@ -2054,6 +2032,12 @@ body.manager-locked footer {
   }
 }
 
+@media (max-width: 1280px) and (min-width: 921px) {
+  .role-board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 921px) {
   body.tv-screen .dashboard-stage {
     display: grid;
@@ -2067,17 +2051,6 @@ body.manager-locked footer {
   }
 }
 
-.duty-pair {
-  align-items: center;
-}
-
-.duty-pair span {
-  width: 72px;
-  height: 72px;
-  min-width: 72px;
-  min-height: 72px;
-  flex: 0 0 auto;
-}
 
 @media (max-width: 920px) {
   body.tv-screen h1 {
