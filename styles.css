@@ -1188,7 +1188,7 @@ body.management-screen main {
 
 .dashboard-stage {
   display: grid;
-  grid-template-rows: 0.72fr 2.68fr;
+  grid-template-rows: minmax(108px, 0.46fr) minmax(0, 3fr);
   gap: 12px;
   overflow: hidden;
   max-width: calc(100vw - 24px);
@@ -1212,16 +1212,17 @@ body.management-screen main {
 }
 
 .message-panel h2 {
-  font-size: 1.5rem;
+  font-size: 1.34rem;
+  line-height: 1.16;
 }
 
 .message-panel p:last-child,
 .quote-panel blockquote {
-  margin: 8px 0 0;
+  margin: 6px 0 0;
   color: var(--ink-muted);
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 620;
-  line-height: 1.38;
+  line-height: 1.28;
 }
 
 .quote-panel blockquote {
@@ -1285,7 +1286,7 @@ body.management-screen main {
   min-width: 0;
   justify-content: center;
   align-items: flex-start;
-  gap: 4px;
+  gap: 3px;
   overflow: hidden;
 }
 
@@ -1297,14 +1298,14 @@ body.management-screen main {
 .now-clock {
   color: var(--amber);
   font-family: var(--font-mono);
-  font-size: 1.85rem;
+  font-size: 1.64rem;
   font-weight: 760;
   line-height: 1;
 }
 
 .now-class {
   color: var(--ink);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
   font-weight: 700;
 }
 
@@ -1450,7 +1451,13 @@ body.management-screen main {
   flex: 1;
   display: grid;
   grid-template-columns: minmax(260px, 0.75fr) minmax(0, 2fr);
+  align-items: start;
   gap: 12px;
+}
+
+.duty-cleaning-layout .duty-card {
+  align-self: start;
+  height: fit-content;
 }
 
 .duty-label {
@@ -1691,7 +1698,7 @@ body.management-screen main {
 @media (min-width: 921px) {
   body.tv-screen .dashboard-stage {
     display: grid;
-    grid-template-rows: 0.72fr 2.68fr;
+    grid-template-rows: minmax(108px, 0.46fr) minmax(0, 3fr);
     gap: 12px;
   }
 
