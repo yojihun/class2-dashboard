@@ -1213,8 +1213,8 @@ body.management-screen main {
   min-height: 0;
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .schedule-day {
@@ -1228,6 +1228,7 @@ body.management-screen main {
 }
 
 .schedule-day.is-today {
+  grid-column: span 2;
   border-color: var(--primary-line);
   background: var(--primary-soft);
 }
@@ -1238,9 +1239,14 @@ body.management-screen main {
   justify-content: space-between;
   gap: 8px;
   border-bottom: 1px solid var(--hairline);
-  padding: 9px 10px;
+  padding: 10px 12px;
   color: var(--ink);
   font-weight: 800;
+}
+
+.schedule-day.is-today .schedule-day-head {
+  color: var(--primary);
+  font-size: 1.18rem;
 }
 
 .schedule-day-head strong {
@@ -1259,9 +1265,9 @@ body.management-screen main {
 .schedule-day ul {
   display: grid;
   align-content: start;
-  gap: 6px;
+  gap: 7px;
   margin: 0;
-  padding: 9px;
+  padding: 10px;
   list-style: none;
 }
 
@@ -1270,8 +1276,15 @@ body.management-screen main {
   gap: 2px;
   border: 1px solid var(--hairline-soft);
   border-radius: var(--radius-sm);
-  padding: 7px 8px;
+  padding: 8px 9px;
   background: var(--surface-1);
+}
+
+.schedule-day.is-today li {
+  gap: 4px;
+  border-color: var(--primary-line);
+  padding: 10px 12px;
+  background: rgba(20, 23, 31, 0.82);
 }
 
 .schedule-day li span {
@@ -1281,11 +1294,21 @@ body.management-screen main {
   font-weight: 650;
 }
 
+.schedule-day.is-today li span {
+  font-size: 0.82rem;
+}
+
 .schedule-day li strong {
   color: var(--ink);
   font-size: 0.82rem;
   font-weight: 650;
   line-height: 1.28;
+}
+
+.schedule-day.is-today li strong {
+  font-size: 1.08rem;
+  font-weight: 760;
+  line-height: 1.3;
 }
 
 .schedule-board.is-dense .schedule-day ul {
@@ -1300,6 +1323,11 @@ body.management-screen main {
 .schedule-board.is-dense .schedule-day li strong {
   font-size: 0.74rem;
   line-height: 1.18;
+}
+
+.schedule-board.is-dense .schedule-day.is-today li strong {
+  font-size: 0.94rem;
+  line-height: 1.2;
 }
 
 .duty-cleaning-layout {

@@ -59,8 +59,7 @@ const fallbackSchedules = {
 let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
 let todaySubjects = Array(7).fill("-");
 
-const TODAY_SHEET_ID = "1wn0iUCjxhiWxHDV3Ia1bBQyDyOEnvB_OHBc7tL0kDeE";
-const TODAY_SHEET_GID = "556197737";
+const TODAY_SHEET_ID = "1SzXgcGveGAhkl0_SvMlV2t2dRLvIGFZCWg4ybydJHHM";
 const PERIOD_RULES = [
   { key: "1", label: "1교시", subjectIndex: 0, start: [8, 20], end: [9, 10] },
   { key: "2", label: "2교시", subjectIndex: 1, start: [9, 20], end: [10, 10] },
@@ -181,7 +180,18 @@ function cellValue(cell) {
 }
 
 async function loadTodaySubjects() {
-  const url = `https://docs.google.com/spreadsheets/d/${TODAY_SHEET_ID}/gviz/tq?gid=${TODAY_SHEET_GID}&range=Q7:W7&tqx=out:json`;
+  try {
+    const response = await fetch("/api/today-schedule", { cache: "no-store" });
+    if (!response.ok) throw new Error("Schedule API failed");
+    const data = await response.json();
+    if (!Array.isArray(data.subjects)) throw new Error("Invalid schedule API response");
+    todaySubjects = Array.from({ length: 7 }, (_, index) => String(data.subjects[index] || "-").trim() || "-");
+    return;
+  } catch {
+    // Local static preview cannot run Vercel functions, so try the public sheet directly.
+  }
+
+  const url = `https://docs.google.com/spreadsheets/d/${TODAY_SHEET_ID}/gviz/tq?range=A1:G1&tqx=out:json`;
   try {
     const response = await fetch(url, { cache: "no-store" });
     if (!response.ok) throw new Error("Sheet request failed");
@@ -324,32 +334,15 @@ function setActiveView(view) {
   document.querySelectorAll("[data-view-panel]").forEach((panel) => panel.classList.toggle("is-active", panel.dataset.viewPanel === view));
 }
 
-function initViewRotation() {
-  let currentIndex = 0;
-  let rotationTimer = null;
-
-  const restart = () => {
-    window.clearInterval(rotationTimer);
-    if (window.matchMedia("(max-width: 920px)").matches) return;
-    rotationTimer = window.setInterval(() => {
-      currentIndex = (currentIndex + 1) % VIEW_ORDER.length;
-      setActiveView(VIEW_ORDER[currentIndex]);
-    }, 5000);
-  };
-
+function initViewTabs() {
   document.querySelectorAll("[data-view]").forEach((button) => {
     button.addEventListener("click", () => {
-      currentIndex = VIEW_ORDER.indexOf(button.dataset.view);
       setActiveView(button.dataset.view);
-      restart();
       if (window.matchMedia("(max-width: 920px)").matches) {
         document.querySelector(`[data-view-panel="${button.dataset.view}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     });
   });
-
-  restart();
-  window.matchMedia("(max-width: 920px)").addEventListener("change", restart);
 }
 
 async function init() {
@@ -366,7 +359,7 @@ async function init() {
     renderLive();
     renderNowPanel();
   }, 1000);
-  initViewRotation();
+  initViewTabs();
 }
 
 init();
