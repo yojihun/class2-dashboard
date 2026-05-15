@@ -227,7 +227,7 @@ function periodInfo(now) {
       return i === 0 ? "등교 전" : "쉬는 시간";
     }
   }
-  return "하교 후";
+  return "방과후";
 }
 
 function currentPeriodKey(now) {
@@ -399,10 +399,10 @@ function renderDutyAndCleaning() {
   document.querySelector("#duty-card").innerHTML = `<p class="duty-label">이번 주 주번</p><div class="duty-pair">${pair.map((name) => `<span>${shortName(name)}</span>`).join("")}</div><p>다음 주: ${nextPair.map(shortName).join(", ")}</p>`;
 
   const today = getKoreaToday();
-  const cleanAnchor = new Date("2026-05-28T00:00:00+09:00");
+  const cleanAnchor = new Date("2026-05-11T00:00:00+09:00");
   const cycle = Math.max(0, Math.floor((startOfWeek(today) - startOfWeek(cleanAnchor)) / (14 * 24 * 60 * 60 * 1000)));
   const start = addDays(cleanAnchor, cycle * 14);
-  const end = addWeekdays(start, 6);
+  const end = addDays(start, 14);
   document.querySelector("#cleaning-period").textContent = `${formatMonthDay(start)} - ${formatMonthDay(end)}`;
   document.querySelector("#cleaning-grid").innerHTML = cleaningAssignments
     .map((name, idx) => {
