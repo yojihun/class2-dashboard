@@ -4,6 +4,7 @@ const VALID_WEEKDAYS = new Set(["월", "화", "수", "목", "금"]);
 const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]?\s*/;
 const DASH_PREFIX = /^[-•·▪❍\s]+/;
 const TASK_BULLET = /❍/g;
+const TIME_DETAIL_PREFIX = /^(\d{1,2}:\d{2}\s*~|[1-7]\s*교시\b)/;
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash-lite";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
@@ -81,6 +82,36 @@ function splitDateBlocks(lines) {
 
   flush();
   return blocks;
+}
+
+function expectedWeekdayDays(range) {
+  if (!range) return new Set();
+  const days = new Set();
+  const start = Math.min(range.startDay, range.endDay);
+  const end = Math.max(range.startDay, range.endDay);
+  for (let date = start; date <= end; date += 1) {
+    const day = dayFromDate(range.year, range.startMonth, date);
+    if (VALID_WEEKDAYS.has(day)) days.add(day);
+  }
+  return days;
+}
+
+function coversExpectedWeekdays(tasks, expectedDays) {
+  if (!expectedDays || expectedDays.size === 0) return true;
+  const actual = new Set((tasks || []).map((task) => task.day).filter(Boolean));
+  for (const day of expectedDays) {
+    if (!actual.has(day)) return false;
+  }
+  return true;
+}
+
+function mergeMissingDays(primary, secondary) {
+  const merged = primary.slice();
+  const primaryDays = new Set(primary.map((task) => task.day));
+  for (const task of secondary) {
+    if (!primaryDays.has(task.day)) merged.push(task);
+  }
+  return merged;
 }
 
 function normalizePositionedItems(items) {
@@ -189,8 +220,10 @@ function splitPositionedBlocks(items, range) {
     const index = allMarkerSections.findIndex((item) => item.date === marker.date && item.y === marker.y);
     const current = allMarkerSections[index];
     if (!current) return null;
-    const top = current.top;
-    const bottom = allMarkerSections[index + 1]?.top || Number.POSITIVE_INFINITY;
+    const next = allMarkerSections[index + 1];
+    const sharesNextSection = next && next.top <= current.top;
+    const top = sharesNextSection ? Math.max(current.top, marker.y - 2) : current.top;
+    const bottom = next ? (next.top > top ? next.top : next.y) : Number.POSITIVE_INFINITY;
     const bandItems = items.filter((item) => item.page === 1 && item.y >= top && item.y < bottom && !/^(\d{1,2}|)$/.test(item.text));
     const columnLines = columnRanges.map(([left, right]) => {
       const columnItems = bandItems.filter((item) => item.x >= left && item.x < right);
@@ -208,7 +241,7 @@ function parsePositionedTasks(items, range) {
   for (const block of blocks) {
     const day = dayFromDate(range.year, range.startMonth, block.date);
     if (!VALID_WEEKDAYS.has(day)) continue;
-    for (const lines of block.columnLines) {
+    for (const lines of rebalanceContinuationColumns(block.columnLines)) {
       const parsed = parseBlockTasks(lines);
       for (const task of parsed) collected.push({ day, task: task.task, details: task.details });
     }
@@ -236,7 +269,7 @@ function normalizeDayBlocks(dayBlocks) {
 function parseDayBlocksLocally(dayBlocks) {
   const collected = [];
   for (const block of dayBlocks) {
-    for (const lines of block.columns) {
+    for (const lines of rebalanceContinuationColumns(block.columns)) {
       const parsed = parseBlockTasks(lines);
       for (const task of parsed) collected.push({ day: block.day, task: task.task, details: task.details });
     }
@@ -250,6 +283,27 @@ function splitBulletTasks(line) {
     .split(TASK_BULLET)
     .map((s) => normalizeLine(s))
     .filter(Boolean);
+}
+
+function isContinuationLine(line) {
+  const normalized = normalizeLine(line);
+  return DASH_PREFIX.test(normalized) || DETAIL_PREFIX.test(normalized) || TIME_DETAIL_PREFIX.test(normalized);
+}
+
+function rebalanceContinuationColumns(columns) {
+  const balanced = columns.map((column) => column.slice());
+  for (let i = 1; i < balanced.length; i += 1) {
+    while (balanced[i].length && isContinuationLine(balanced[i][0])) {
+      const previousIndex = balanced
+        .slice(0, i)
+        .map((column, index) => (column.length ? index : -1))
+        .filter((index) => index >= 0)
+        .at(-1);
+      if (previousIndex < 0) break;
+      balanced[previousIndex].push(balanced[i].shift());
+    }
+  }
+  return balanced;
 }
 
 function parseBlockTasks(blockLines) {
@@ -271,6 +325,12 @@ function parseBlockTasks(blockLines) {
     if (cleaned) cur.details.push(cleaned);
   };
 
+  const addDetailToPrevious = (line) => {
+    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").trim();
+    const previous = tasks[tasks.length - 1];
+    if (cleaned && previous) previous.details.push(cleaned);
+  };
+
   for (const raw of blockLines) {
     const line = normalizeLine(raw);
     if (!line) continue;
@@ -286,12 +346,16 @@ function parseBlockTasks(blockLines) {
       continue;
     }
 
-    if (!cur) continue;
-
-    if (DASH_PREFIX.test(line) || DETAIL_PREFIX.test(line)) {
+    if (DASH_PREFIX.test(line) || DETAIL_PREFIX.test(line) || TIME_DETAIL_PREFIX.test(line)) {
+      if (!cur) {
+        addDetailToPrevious(line);
+        continue;
+      }
       addDetail(line);
       continue;
     }
+
+    if (!cur) continue;
 
     // Append wrapped continuation fragments to details first.
     if (cur.details.length > 0) {
@@ -317,9 +381,9 @@ function postClean(tasks) {
     if (task === "") continue;
     if (!details.length && /^[가-힣]{3}$/.test(task)) continue;
     if (!details.length && /^제\s*\d+\s*회$/.test(task)) continue;
-    if (DETAIL_PREFIX.test(task) || /^\d{1,2}:\d{2}\s*~/.test(task)) {
+    if (DASH_PREFIX.test(task) || DETAIL_PREFIX.test(task) || TIME_DETAIL_PREFIX.test(task)) {
       if (merged.length > 0 && merged[merged.length - 1].day === t.day) {
-        merged[merged.length - 1].details.push(task.replace(DASH_PREFIX, ""));
+        merged[merged.length - 1].details.push(task.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, ""));
         merged[merged.length - 1].details.push(...details);
       }
       continue;
@@ -424,6 +488,10 @@ module.exports = async (req, res) => {
     return;
   }
 
+  const range = inferRange(fileName);
+  const expectedDays = expectedWeekdayDays(range);
+  let dayBlockTasks = [];
+
   if (dayBlocks.length) {
     try {
       const collected = [];
@@ -431,28 +499,31 @@ module.exports = async (req, res) => {
         const parsed = await parseBlockWithGemini(block);
         if (parsed) collected.push(...parsed);
       }
-      const tasks = postClean(collected);
-      if (tasks.length) {
-        res.status(200).json({ tasks, parser: "day-blocks-gemini", model: GEMINI_MODEL });
+      dayBlockTasks = postClean(collected);
+      if (dayBlockTasks.length && coversExpectedWeekdays(dayBlockTasks, expectedDays)) {
+        res.status(200).json({ tasks: dayBlockTasks, parser: "day-blocks-gemini", model: GEMINI_MODEL });
         return;
       }
     } catch {
-      const tasks = parseDayBlocksLocally(dayBlocks);
-      if (tasks.length) {
-        res.status(200).json({ tasks, parser: "day-blocks-local" });
+      dayBlockTasks = parseDayBlocksLocally(dayBlocks);
+      if (dayBlockTasks.length && coversExpectedWeekdays(dayBlockTasks, expectedDays)) {
+        res.status(200).json({ tasks: dayBlockTasks, parser: "day-blocks-local" });
         return;
       }
     }
 
-    const tasks = parseDayBlocksLocally(dayBlocks);
-    if (tasks.length) {
-      res.status(200).json({ tasks, parser: "day-blocks-local" });
+    if (!dayBlockTasks.length) dayBlockTasks = parseDayBlocksLocally(dayBlocks);
+    if (dayBlockTasks.length && coversExpectedWeekdays(dayBlockTasks, expectedDays)) {
+      res.status(200).json({ tasks: dayBlockTasks, parser: "day-blocks-local" });
       return;
     }
   }
 
-  const range = inferRange(fileName);
   if (!range) {
+    if (dayBlockTasks.length) {
+      res.status(200).json({ tasks: dayBlockTasks, parser: "day-blocks-local" });
+      return;
+    }
     res.status(422).json({ error: "파일명에서 주간 범위를 찾지 못했습니다. 예: 5월11일~5월15일" });
     return;
   }
@@ -460,6 +531,11 @@ module.exports = async (req, res) => {
   if (positionedItems.length) {
     const positionedTasks = parsePositionedTasks(positionedItems, range);
     if (positionedTasks.length) {
+      if (dayBlockTasks.length) {
+        const mergedTasks = mergeMissingDays(dayBlockTasks, positionedTasks);
+        res.status(200).json({ tasks: mergedTasks, parser: "day-blocks-positioned-local" });
+        return;
+      }
       res.status(200).json({ tasks: positionedTasks, parser: "positioned-local" });
       return;
     }
@@ -480,6 +556,11 @@ module.exports = async (req, res) => {
     }
     const geminiTasks = postClean(geminiCollected);
     if (geminiTasks.length) {
+      if (dayBlockTasks.length) {
+        const mergedTasks = mergeMissingDays(dayBlockTasks, geminiTasks);
+        res.status(200).json({ tasks: mergedTasks, parser: "day-blocks-gemini-date-blocks", model: GEMINI_MODEL });
+        return;
+      }
       res.status(200).json({ tasks: geminiTasks, parser: "gemini-date-blocks", model: GEMINI_MODEL });
       return;
     }
@@ -497,7 +578,17 @@ module.exports = async (req, res) => {
 
   const tasks = postClean(collected);
   if (!tasks.length) {
+    if (dayBlockTasks.length) {
+      res.status(200).json({ tasks: dayBlockTasks, parser: "day-blocks-local-partial" });
+      return;
+    }
     res.status(422).json({ error: "업무 추출 결과가 비어 있습니다." });
+    return;
+  }
+
+  if (dayBlockTasks.length) {
+    const mergedTasks = mergeMissingDays(dayBlockTasks, tasks);
+    res.status(200).json({ tasks: mergedTasks, parser: "day-blocks-local-merged" });
     return;
   }
 

@@ -326,7 +326,7 @@ function renderSchedule() {
 
   board.innerHTML = [1, 2, 3, 4, 5].map((dayIndex) => {
     const tasks = homeroomTasks.filter((task) => task.dayIndex === dayIndex);
-    const rows = tasks.length ? tasks : (dayIndex === today ? fallbackSchedules[today] || [] : []);
+    const rows = tasks.length ? tasks : (!plan && dayIndex === today ? fallbackSchedules[today] || [] : []);
     const isToday = dayIndex === today;
     const empty = !rows.length;
 

@@ -1209,6 +1209,12 @@ body.manager-locked footer {
   font-family: var(--font-mono);
 }
 
+.info-head-class strong {
+  color: var(--primary);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .info-head-metric small {
   color: var(--primary);
   font-size: 0.82rem;
@@ -1216,7 +1222,7 @@ body.manager-locked footer {
 }
 
 .info-head-schedule {
-  justify-content: stretch;
+  justify-content: flex-end;
   border-left: 1px solid var(--hairline-strong);
   padding-left: 10px;
 }
@@ -1279,6 +1285,14 @@ body.manager-locked footer {
   padding-bottom: 12px;
 }
 
+.class-row-name {
+  margin: 0 0 4px;
+  color: var(--primary);
+  font-size: 1.46rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .message-panel h2 {
   font-size: 1.34rem;
   line-height: 1.16;
@@ -1303,7 +1317,7 @@ body.manager-locked footer {
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: flex-end;
   gap: 18px;
   overflow: hidden;
 }

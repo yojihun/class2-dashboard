@@ -184,7 +184,11 @@ function buildDayBlocks(items, fileName) {
       const index = markerSections.findIndex((item) => item.date === marker.date && item.y === marker.y);
       const current = markerSections[index];
       if (!current) return null;
-      const bandItems = items.filter((item) => item.page === 1 && item.y >= current.top && item.y < (markerSections[index + 1]?.top || Infinity) && !/^(\d{1,2}|)$/.test(item.text));
+      const next = markerSections[index + 1];
+      const sharesNextSection = next && next.top <= current.top;
+      const top = sharesNextSection ? Math.max(current.top, marker.y - 2) : current.top;
+      const bottom = next ? (next.top > top ? next.top : next.y) : Infinity;
+      const bandItems = items.filter((item) => item.page === 1 && item.y >= top && item.y < bottom && !/^(\d{1,2}|)$/.test(item.text));
       const columns = columnRanges.map(([left, right]) =>
         groupItemsIntoLines(bandItems.filter((item) => item.x >= left && item.x < right))
           .map((line) => line.items.map((item) => item.text).join(" "))
@@ -319,7 +323,7 @@ async function parseWithServer(lines, items, dayBlocks, fileName) {
   const response = await fetch("/api/parse-weekly-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fileName: normalize(fileName), lines, dayBlocks })
+    body: JSON.stringify({ fileName: normalize(fileName), lines, items, dayBlocks })
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: "Gemini 파서 실패" }));
