@@ -4,6 +4,8 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dis
 const WEEKDAY_TO_INDEX = { 월: 1, 화: 2, 수: 3, 목: 4, 금: 5 };
 const DAY_NAMES = { 1: "월요일", 2: "화요일", 3: "수요일", 4: "목요일", 5: "금요일" };
 const DAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
+const MANAGER_PASSWORD = "1234";
+const MANAGER_AUTH_KEY = "class2-manager-auth";
 
 const defaultSettings = {
   teacher: {
@@ -579,7 +581,39 @@ function bindEvents() {
   document.querySelector("#save-settings-btn").addEventListener("click", saveDashboardSettings);
 }
 
+function unlockManager() {
+  document.body.classList.remove("manager-locked");
+}
+
+function bindManagerLogin() {
+  const form = document.querySelector("#manager-login-form");
+  const input = document.querySelector("#manager-password-input");
+  const status = document.querySelector("#manager-login-status");
+  if (!form || !input || !status) return;
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (input.value === MANAGER_PASSWORD) {
+      sessionStorage.setItem(MANAGER_AUTH_KEY, "ok");
+      unlockManager();
+      initManager();
+      return;
+    }
+    input.value = "";
+    input.focus();
+    status.textContent = "비밀번호가 맞지 않습니다.";
+  });
+}
+
 async function init() {
+  bindManagerLogin();
+  if (sessionStorage.getItem(MANAGER_AUTH_KEY) === "ok") {
+    unlockManager();
+    await initManager();
+  }
+}
+
+async function initManager() {
   bindEvents();
   try {
     await loadStateFromServer();

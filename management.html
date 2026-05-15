@@ -6,7 +6,18 @@
     <title>2반 관리 시스템</title>
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body class="management-screen">
+  <body class="management-screen manager-locked">
+    <section class="manager-login" aria-label="관리 비밀번호">
+      <form id="manager-login-form" class="panel manager-login-panel">
+        <p class="section-kicker">Management</p>
+        <h1>관리 모드</h1>
+        <label>비밀번호<input id="manager-password-input" type="password" inputmode="numeric" autocomplete="current-password" autofocus></label>
+        <div class="manager-actions compact-actions">
+          <button type="submit">열기</button>
+          <span id="manager-login-status">비밀번호를 입력하세요.</span>
+        </div>
+      </form>
+    </section>
     <header class="hero management-hero">
       <nav class="topbar">
         <a href="index.html">대시보드</a>

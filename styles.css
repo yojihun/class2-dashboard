@@ -1013,6 +1013,59 @@ body.management-screen main {
   margin-top: 0;
 }
 
+.manager-login {
+  min-height: 100vh;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.manager-login-panel {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 16px;
+}
+
+.manager-login-panel h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.manager-login-panel label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink-muted);
+  font-size: 0.88rem;
+  font-weight: 760;
+}
+
+.manager-login-panel input {
+  min-height: 46px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: var(--surface-1);
+  color: var(--ink);
+  font-size: 1.2rem;
+}
+
+body.manager-locked {
+  overflow: hidden;
+}
+
+body.manager-locked .manager-login {
+  display: flex;
+}
+
+body.manager-locked .management-hero,
+body.manager-locked .manager-main,
+body.manager-locked footer {
+  display: none;
+}
+
 @media (max-width: 920px) {
   body.tv-screen {
     height: auto;
