@@ -624,10 +624,10 @@ main {
 }
 
 .task-text-input {
-  border: 1px solid transparent;
+  border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-xs);
   padding: 3px 6px;
-  background: transparent;
+  background: var(--surface-3);
   color: var(--ink);
   font: inherit;
   font-size: 0.94rem;
@@ -637,13 +637,12 @@ main {
 }
 
 .task-text-input:hover {
-  border-color: var(--hairline-strong);
-  background: var(--surface-3);
+  border-color: var(--primary-line);
 }
 
 .task-text-input:focus {
   border-color: var(--primary-line);
-  background: var(--surface-3);
+  background: var(--surface-2);
   outline: none;
 }
 
@@ -660,12 +659,7 @@ main {
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 120ms, background 120ms, color 120ms;
-}
-
-.plan-item:hover .task-delete-btn {
-  opacity: 1;
+  transition: background 120ms, color 120ms;
 }
 
 .task-delete-btn:hover {
