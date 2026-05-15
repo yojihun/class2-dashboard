@@ -59,6 +59,7 @@ const fallbackSchedules = {
 let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
 let todaySubjects = Array(7).fill("-");
 let environmentState = null;
+let mealState = null;
 
 const TODAY_SHEET_ID = "1SzXgcGveGAhkl0_SvMlV2t2dRLvIGFZCWg4ybydJHHM";
 const PERIOD_RULES = [
@@ -264,6 +265,36 @@ function renderDailyTimetable() {
   if (label) label.textContent = periodInfo(now);
 }
 
+async function loadMeal() {
+  try {
+    const response = await fetch("/api/meal", { cache: "no-store" });
+    if (!response.ok) throw new Error("Meal API failed");
+    mealState = await response.json();
+  } catch {
+    mealState = null;
+  }
+}
+
+function renderMeal() {
+  const board = document.querySelector("#meal-board");
+  if (!board) return;
+
+  const meals = mealState?.meals || [];
+  if (!meals.length) {
+    board.innerHTML = `<p class="meal-empty">오늘은 급식이 없습니다.</p>`;
+    return;
+  }
+
+  board.innerHTML = meals.map((meal) => `
+    <div class="meal-entry">
+      <span class="meal-type-badge">${escapeHtml(meal.type)}</span>
+      <ul class="meal-dishes">
+        ${meal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}
+      </ul>
+      ${meal.calories ? `<p class="meal-cal">${escapeHtml(meal.calories)}</p>` : ""}
+    </div>`).join("");
+}
+
 async function loadEnvironment() {
   try {
     const response = await fetch("/api/environment", { cache: "no-store" });
@@ -416,8 +447,7 @@ function initViewTabs() {
 
 async function init() {
   renderLive();
-  await loadTodaySubjects();
-  await loadEnvironment();
+  await Promise.all([loadTodaySubjects(), loadEnvironment(), loadMeal()]);
   dashboardState = await loadState();
   renderSettings();
   renderSchedule();
@@ -427,6 +457,7 @@ async function init() {
   renderDailyTimetable();
   renderNowPanel();
   renderEnvironment();
+  renderMeal();
   window.setInterval(() => {
     renderLive();
     renderNowPanel();
@@ -435,6 +466,10 @@ async function init() {
     await loadEnvironment();
     renderEnvironment();
   }, 5 * 60 * 1000);
+  window.setInterval(async () => {
+    await loadMeal();
+    renderMeal();
+  }, 60 * 60 * 1000);
   initViewTabs();
 }
 
