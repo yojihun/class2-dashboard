@@ -1540,6 +1540,35 @@ body.manager-locked footer {
   align-content: start;
 }
 
+#view-duties .panel-head {
+  margin-bottom: 8px;
+}
+
+#view-duties .assignment-grid {
+  max-height: none;
+  grid-auto-rows: minmax(46px, auto);
+  gap: 8px;
+  overflow: visible;
+}
+
+#view-duties .assignment {
+  min-height: 46px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+}
+
+#view-duties .assignment strong {
+  font-size: 0.86rem;
+  line-height: 1.12;
+}
+
+#view-duties .assignment span {
+  padding: 2px 8px;
+  font-size: 0.8rem;
+}
+
 .role-board {
   flex: 1;
   min-height: 0;
