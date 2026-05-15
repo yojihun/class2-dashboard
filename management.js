@@ -185,8 +185,7 @@ function buildDayBlocks(items, fileName) {
       const current = markerSections[index];
       if (!current) return null;
       const next = markerSections[index + 1];
-      const sharesNextSection = next && next.top <= current.top;
-      const top = sharesNextSection ? Math.max(current.top, marker.y - 2) : current.top;
+      const top = current.top;
       const bottom = next ? (next.top > top ? next.top : next.y) : Infinity;
       const bandItems = items.filter((item) => item.page === 1 && item.y >= top && item.y < bottom && !/^(\d{1,2}|)$/.test(item.text));
       const columns = columnRanges.map(([left, right]) =>

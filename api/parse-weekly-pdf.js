@@ -1,7 +1,7 @@
 const WEEKDAY_ORDER = ["일", "월", "화", "수", "목", "금", "토"];
 const VALID_WEEKDAYS = new Set(["월", "화", "수", "목", "금"]);
 
-const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내)\s*[:：]?\s*/;
+const DETAIL_PREFIX = /^(시간|기간|담당|대상|장소|참석|내용|방법|준비|안내|제출)\s*[:：]?\s*/;
 const DASH_PREFIX = /^[-•·▪❍\s]+/;
 const TASK_BULLET = /❍/g;
 const TIME_DETAIL_PREFIX = /^(\d{1,2}:\d{2}\s*~|[1-7]\s*교시\b)/;
@@ -221,8 +221,7 @@ function splitPositionedBlocks(items, range) {
     const current = allMarkerSections[index];
     if (!current) return null;
     const next = allMarkerSections[index + 1];
-    const sharesNextSection = next && next.top <= current.top;
-    const top = sharesNextSection ? Math.max(current.top, marker.y - 2) : current.top;
+    const top = current.top;
     const bottom = next ? (next.top > top ? next.top : next.y) : Number.POSITIVE_INFINITY;
     const bandItems = items.filter((item) => item.page === 1 && item.y >= top && item.y < bottom && !/^(\d{1,2}|)$/.test(item.text));
     const columnLines = columnRanges.map(([left, right]) => {
@@ -278,7 +277,7 @@ function parseDayBlocksLocally(dayBlocks) {
 }
 
 function splitBulletTasks(line) {
-  if (!line.includes("❍")) return [];
+  if (!line.trim().startsWith("❍")) return [];
   return line
     .split(TASK_BULLET)
     .map((s) => normalizeLine(s))
@@ -302,8 +301,29 @@ function rebalanceContinuationColumns(columns) {
       if (previousIndex < 0) break;
       balanced[previousIndex].push(balanced[i].shift());
     }
+    const previousIndex = balanced
+      .slice(0, i)
+      .map((column, index) => (column.length ? index : -1))
+      .filter((index) => index >= 0)
+      .at(-1);
+    if (
+      previousIndex >= 0 &&
+      balanced[i].length &&
+      !isContinuationLine(balanced[i][0]) &&
+      !balanced[i][0].includes("❍") &&
+      balanced[previousIndex].some((line) => /❍\s*$/.test(line))
+    ) {
+      balanced[i][0] = `❍ ${balanced[i][0]}`;
+    }
   }
   return balanced;
+}
+
+function looksLikeTaskTitle(line) {
+  const normalized = normalizeLine(line);
+  if (!normalized || isContinuationLine(normalized)) return false;
+  if (normalized.length < 8) return false;
+  return /[가-힣]/.test(normalized);
 }
 
 function parseBlockTasks(blockLines) {
@@ -321,17 +341,18 @@ function parseBlockTasks(blockLines) {
 
   const addDetail = (line) => {
     if (!cur) return;
-    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").trim();
+    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").replace(/❍\s*$/, "").trim();
     if (cleaned) cur.details.push(cleaned);
   };
 
   const addDetailToPrevious = (line) => {
-    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").trim();
+    const cleaned = line.replace(DASH_PREFIX, "").replace(DETAIL_PREFIX, "").replace(/❍\s*$/, "").trim();
     const previous = tasks[tasks.length - 1];
     if (cleaned && previous) previous.details.push(cleaned);
   };
 
-  for (const raw of blockLines) {
+  for (let index = 0; index < blockLines.length; index += 1) {
+    const raw = blockLines[index];
     const line = normalizeLine(raw);
     if (!line) continue;
 
@@ -359,6 +380,12 @@ function parseBlockTasks(blockLines) {
 
     // Append wrapped continuation fragments to details first.
     if (cur.details.length > 0) {
+      const nextLine = normalizeLine(blockLines[index + 1] || "");
+      if (looksLikeTaskTitle(line) && isContinuationLine(nextLine)) {
+        flush();
+        cur = { task: line, details: [] };
+        continue;
+      }
       cur.details[cur.details.length - 1] = `${cur.details[cur.details.length - 1]} ${line}`.replace(/\s+/g, " ").trim();
       continue;
     }
@@ -374,7 +401,7 @@ function parseBlockTasks(blockLines) {
 function postClean(tasks) {
   const merged = [];
   for (const t of tasks) {
-    const task = normalizeLine(t.task);
+    const task = normalizeLine(t.task).replace("성취평가점검단 차워크숍", "성취평가점검단 2차워크숍");
     const details = (t.details || []).map((d) => normalizeLine(d)).filter(Boolean);
     if (!task) continue;
     if (/^\d{1,2}$/.test(task)) continue;
