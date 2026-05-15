@@ -1353,6 +1353,10 @@ body.manager-locked footer {
   color: var(--amber);
 }
 
+.quote-panel .section-kicker { color: var(--amber); }
+.meal-panel .section-kicker  { color: var(--success); }
+.now-panel .section-kicker   { color: var(--amber); }
+
 .meal-cal-inline {
   margin-left: 1.4em;
   color: var(--amber);
@@ -1467,8 +1471,29 @@ body.manager-locked footer {
 }
 
 .daily-period.is-current {
-  border: 0;
-  background: transparent;
+  position: relative;
+  border: 1px solid var(--primary-line);
+  background: var(--primary-soft);
+  border-radius: var(--radius-pill);
+  padding: 3px 10px 8px;
+  overflow: hidden;
+}
+
+.period-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+}
+
+.period-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 1px;
+  transition: width 30s linear;
 }
 
 .daily-period.is-current span,
@@ -1486,13 +1511,58 @@ body.manager-locked footer {
   grid-template-columns: auto minmax(0, 1fr);
   grid-template-areas:
     "kicker kicker"
-    "clock status";
+    "clock status"
+    "progress progress";
   column-gap: 14px;
   row-gap: 2px;
   align-content: start;
   justify-content: flex-start;
   align-items: end;
   overflow: hidden;
+}
+
+.day-progress-wrap {
+  grid-area: progress;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.day-progress-track {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.day-progress-bar {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 2px;
+  transition: width 30s linear;
+}
+
+.day-progress-pct {
+  flex: 0 0 auto;
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.now-panel.is-countdown {
+  background: linear-gradient(135deg, rgba(255, 209, 102, 0.1), var(--surface-1));
+  border-color: rgba(255, 209, 102, 0.4);
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+
+@keyframes countdown-pulse {
+  0%, 100% { border-color: rgba(255, 209, 102, 0.4); }
+  50%       { border-color: rgba(255, 209, 102, 0.75); }
 }
 
 .now-panel .section-kicker {
@@ -2009,7 +2079,8 @@ body.manager-locked footer {
     grid-template-areas:
       "kicker"
       "clock"
-      "status";
+      "status"
+      "progress";
     row-gap: 5px;
   }
 

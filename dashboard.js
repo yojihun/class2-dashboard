@@ -250,14 +250,20 @@ function renderDailyTimetable() {
   const day = now.getDay();
   const activeKey = currentPeriodKey(now);
   const visibleRules = PERIOD_RULES.filter((rule) => rule.key !== "LUNCH");
+  const nowMin = minuteOfDay(now);
   board.innerHTML = visibleRules.map((rule) => {
     const isBlocked = (rule.blockedWeekdays || []).includes(day);
     const subject = isBlocked ? "없음" : todaySubjects[rule.subjectIndex] || "-";
     if (!subject || subject === "-" || subject === "없음") return "";
+    const isCurrent = activeKey === rule.key;
+    const ruleStart = rule.start[0] * 60 + rule.start[1];
+    const ruleEnd = rule.end[0] * 60 + rule.end[1];
+    const prog = isCurrent ? Math.round(((nowMin - ruleStart) / (ruleEnd - ruleStart)) * 100) : 0;
     return `
-      <div class="daily-period ${activeKey === rule.key ? "is-current" : ""} ${isBlocked ? "is-empty" : ""}">
+      <div class="daily-period ${isCurrent ? "is-current" : ""} ${isBlocked ? "is-empty" : ""}">
         <span>${rule.key}.</span>
         <strong>${escapeHtml(subject)}</strong>
+        ${isCurrent ? `<div class="period-progress"><div class="period-progress-fill" style="width:${prog}%"></div></div>` : ""}
       </div>`;
   }).join("");
 
@@ -312,11 +318,45 @@ function renderEnvironment() {
 
   const temperature = environmentState?.weather?.temperature;
   const pm25 = environmentState?.air?.pm25;
-  const pm10 = environmentState?.air?.pm10;
+  const wIcon = environmentState?.weather?.icon || "";
+  const aqLabel = environmentState?.air?.label || "--";
   weatherTemp.textContent = Number.isFinite(Number(temperature)) ? `${Math.round(Number(temperature))}°C` : "";
-  weatherDesc.textContent = environmentState?.weather?.label || "--";
-  airQuality.textContent = environmentState?.air?.label || "--";
+  weatherDesc.textContent = (wIcon ? wIcon + " " : "") + (environmentState?.weather?.label || "--");
+  const aqColors = { "좋음": "var(--success)", "보통": "var(--amber)", "나쁨": "#ff9a3c", "매우나쁨": "var(--danger)" };
+  const aqDots  = { "좋음": "🟢", "보통": "🟡", "나쁨": "🟠", "매우나쁨": "🔴" };
+  airQuality.textContent = (aqDots[aqLabel] || "") + " " + aqLabel;
+  airQuality.style.color = aqColors[aqLabel] || "";
   airDetail.textContent = Number.isFinite(Number(pm25)) ? `(${Math.round(Number(pm25))}μg/m³)` : "";
+}
+
+function updateDayProgress(now) {
+  const nowMin = minuteOfDay(now || getKoreaToday());
+  const dayStart = 8 * 60 + 20;
+  const dayEnd = 15 * 60 + 50;
+  const barEl = document.querySelector("#day-progress-bar");
+  const pctEl = document.querySelector("#day-progress-pct");
+  if (!barEl || !pctEl) return;
+  let pct = 0;
+  if (nowMin <= dayStart) pct = 0;
+  else if (nowMin >= dayEnd) pct = 100;
+  else pct = Math.round(((nowMin - dayStart) / (dayEnd - dayStart)) * 100);
+  barEl.style.width = pct + "%";
+  pctEl.textContent = pct + "%";
+}
+
+function getCountdownInfo(now) {
+  const nowMin = minuteOfDay(now);
+  const secs = now.getSeconds();
+  const day = now.getDay();
+  const activeRules = PERIOD_RULES.filter((r) => !(r.blockedWeekdays || []).includes(day) && r.key !== "LUNCH");
+  for (const rule of activeRules) {
+    const start = rule.start[0] * 60 + rule.start[1];
+    if (start - nowMin === 1) {
+      const secsLeft = 60 - secs;
+      if (secsLeft > 0) return { secsLeft, subject: todaySubjects[rule.subjectIndex] || rule.label };
+    }
+  }
+  return null;
 }
 
 function renderNowPanel() {
@@ -329,14 +369,23 @@ function renderNowPanel() {
   });
   const clockEl = document.querySelector("#current-clock");
   const classEl = document.querySelector("#current-class-status");
-  const status = periodInfo(now);
+  const nowPanel = document.querySelector(".now-panel");
   if (clockEl) clockEl.textContent = clock;
-  if (classEl) {
-    const match = status.match(/^([0-9]+교시)\s+(.+)$/);
-    classEl.innerHTML = match
-      ? `<span>${escapeHtml(match[1])}</span><strong>${escapeHtml(match[2])}</strong>`
-      : `<strong>${escapeHtml(status)}</strong>`;
+  const countdown = getCountdownInfo(now);
+  if (countdown) {
+    nowPanel?.classList.add("is-countdown");
+    if (classEl) classEl.innerHTML = `<span>⏰ ${countdown.secsLeft}초 후</span><strong>${escapeHtml(countdown.subject)} 시작</strong>`;
+  } else {
+    nowPanel?.classList.remove("is-countdown");
+    const status = periodInfo(now);
+    if (classEl) {
+      const match = status.match(/^([0-9]+교시)\s+(.+)$/);
+      classEl.innerHTML = match
+        ? `<span>${escapeHtml(match[1])}</span><strong>${escapeHtml(match[2])}</strong>`
+        : `<strong>${escapeHtml(status)}</strong>`;
+    }
   }
+  updateDayProgress(now);
   renderDailyTimetable();
 }
 
@@ -472,3 +521,13 @@ async function init() {
 }
 
 init();
+
+(function scaleToFit() {
+  const REF_W = 1920, REF_H = 1080;
+  function scale() {
+    const z = Math.min(window.innerWidth / REF_W, window.innerHeight / REF_H);
+    document.documentElement.style.zoom = z.toFixed(4);
+  }
+  scale();
+  window.addEventListener("resize", scale);
+})();

@@ -2,6 +2,32 @@ const GWANAK_LATITUDE = 37.467;
 const GWANAK_LONGITUDE = 126.932;
 const OPENWEATHER_API_KEY = process.env.OPENWEATHER_API_KEY || "";
 
+function wmoIcon(code) {
+  if (code === 0) return "☀️";
+  if (code <= 2) return "🌤";
+  if (code === 3) return "☁️";
+  if (code <= 48) return "🌫";
+  if (code <= 67) return "🌧";
+  if (code <= 77) return "🌨";
+  if (code <= 82) return "🌦";
+  if (code <= 86) return "🌨";
+  return "⛈";
+}
+
+function owmIcon(id) {
+  if (id >= 200 && id < 300) return "⛈";
+  if (id >= 300 && id < 400) return "🌦";
+  if (id >= 500 && id < 510) return "🌧";
+  if (id === 511) return "🌨";
+  if (id >= 520 && id < 600) return "🌦";
+  if (id >= 600 && id < 700) return "🌨";
+  if (id >= 700 && id < 800) return "🌫";
+  if (id === 800) return "☀️";
+  if (id === 801) return "🌤";
+  if (id <= 803) return "⛅";
+  return "☁️";
+}
+
 function weatherLabel(code) {
   const labels = {
     0: "맑음",
@@ -86,7 +112,8 @@ async function loadOpenWeatherEnvironment() {
     source: "openweathermap",
     weather: {
       temperature: weather.main?.temp ?? null,
-      label: weather.weather?.[0]?.description || "날씨 확인"
+      label: weather.weather?.[0]?.description || "날씨 확인",
+      icon: owmIcon(weather.weather?.[0]?.id || 800)
     },
     air: {
       label: airQualityLabel(Number(pm25) || 0),
@@ -124,7 +151,8 @@ async function loadOpenMeteoEnvironment() {
     source: "open-meteo",
     weather: {
       temperature: weather.current?.temperature_2m ?? null,
-      label: weatherLabel(weather.current?.weather_code)
+      label: weatherLabel(weather.current?.weather_code),
+      icon: wmoIcon(weather.current?.weather_code ?? 0)
     },
     air: {
       label: airQualityLabel(Number(pm25) || 0),
