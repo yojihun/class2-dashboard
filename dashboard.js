@@ -282,17 +282,15 @@ function renderMeal() {
   const meals = mealState?.meals || [];
   if (!meals.length) {
     board.innerHTML = `<p class="meal-empty">오늘은 급식이 없습니다.</p>`;
+    const calInline = document.querySelector("#meal-cal-inline");
+    if (calInline) calInline.textContent = "";
     return;
   }
 
-  board.innerHTML = meals.map((meal) => `
-    <div class="meal-entry">
-      <span class="meal-type-badge">${escapeHtml(meal.type)}</span>
-      <ul class="meal-dishes">
-        ${meal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}
-      </ul>
-      ${meal.calories ? `<p class="meal-cal">${escapeHtml(meal.calories)}</p>` : ""}
-    </div>`).join("");
+  const meal = meals[0];
+  const calInline = document.querySelector("#meal-cal-inline");
+  if (calInline) calInline.textContent = meal.calories ? meal.calories : "";
+  board.innerHTML = `<ul class="meal-dishes">${meal.dishes.map((dish) => `<li>${escapeHtml(dish)}</li>`).join("")}</ul>`;
 }
 
 async function loadEnvironment() {

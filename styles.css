@@ -1383,6 +1383,16 @@ body.manager-locked footer {
   color: var(--amber);
 }
 
+.meal-cal-inline {
+  margin-left: 1.4em;
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .meal-board {
   flex: 1;
   min-height: 0;
