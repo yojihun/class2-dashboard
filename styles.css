@@ -1082,7 +1082,7 @@ body.management-screen main {
 
 .dashboard-shell-hero {
   min-height: auto;
-  padding: 7px 10px 8px;
+  padding: 8px 10px 4px;
 }
 
 .dashboard-hero-grid {
@@ -1097,6 +1097,15 @@ body.management-screen main {
   margin: 0 auto 6px;
 }
 
+.dashboard-shell-hero > .dashboard-tabs {
+  display: none;
+}
+
+.dashboard-tabs-main {
+  justify-self: center;
+  margin: 0;
+}
+
 .hero-copy-compact {
   display: flex;
   align-items: center;
@@ -1107,9 +1116,10 @@ body.management-screen main {
   width: 100%;
   min-height: 50px;
   display: grid;
-  grid-template-columns: auto auto auto auto minmax(0, 1fr);
+  grid-template-columns: auto auto auto auto minmax(360px, 1fr);
   align-items: center;
-  gap: 10px;
+  column-gap: clamp(18px, 3vw, 46px);
+  row-gap: 6px;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-sm);
   padding: 8px 14px;
@@ -1188,8 +1198,8 @@ body.management-screen main {
 
 .dashboard-stage {
   display: grid;
-  grid-template-rows: minmax(108px, 0.46fr) minmax(0, 3fr);
-  gap: 12px;
+  grid-template-rows: max-content max-content minmax(0, 1fr);
+  gap: 10px;
   overflow: hidden;
   max-width: calc(100vw - 24px);
 }
@@ -1197,7 +1207,7 @@ body.management-screen main {
 .fixed-board {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.15fr) minmax(220px, 0.75fr);
-  gap: 12px;
+  gap: 10px;
   min-height: 0;
   overflow: hidden;
 }
@@ -1208,7 +1218,12 @@ body.management-screen main {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+}
+
+.fixed-board .panel {
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .message-panel h2 {
@@ -1284,7 +1299,7 @@ body.management-screen main {
 
 .now-panel {
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-start;
   gap: 3px;
   overflow: hidden;
@@ -1564,13 +1579,13 @@ body.management-screen main {
 
 @media (min-width: 921px) {
   body.tv-screen .dashboard-shell-hero {
-    height: 13vh;
+    height: 7vh;
   }
 
   body.tv-screen .dashboard-stage {
     width: min(calc(100vw - 24px), 1920px);
-    height: 84vh;
-    margin-top: 3px;
+    height: 91vh;
+    margin-top: 2px;
   }
 
   body.tv-screen footer {
@@ -1698,8 +1713,8 @@ body.management-screen main {
 @media (min-width: 921px) {
   body.tv-screen .dashboard-stage {
     display: grid;
-    grid-template-rows: minmax(108px, 0.46fr) minmax(0, 3fr);
-    gap: 12px;
+    grid-template-rows: max-content max-content minmax(0, 1fr);
+    gap: 10px;
   }
 
   body.tv-screen .view-stage {
