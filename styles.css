@@ -49,6 +49,7 @@ body {
   letter-spacing: -0.01em;
   word-break: keep-all;
   overflow-wrap: break-word;
+  overflow-x: hidden;
 }
 
 a {
@@ -1132,19 +1133,23 @@ body.management-screen main {
 
 .dashboard-stage {
   display: grid;
-  grid-template-rows: 0.72fr 2.68fr;
+  grid-template-rows: 1fr 2.4fr;
   gap: 12px;
+  overflow: hidden;
 }
 
 .fixed-board {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(240px, 0.75fr);
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 0.82fr) minmax(0, 1.38fr) minmax(220px, 0.9fr);
   gap: 12px;
   min-height: 0;
+  overflow: hidden;
 }
 
 .message-panel,
-.quote-panel {
+.quote-panel,
+.day-timetable-panel {
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -1168,10 +1173,82 @@ body.management-screen main {
   color: var(--amber);
 }
 
+.panel-mini-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.panel-mini-head .section-kicker {
+  margin-bottom: 0;
+}
+
+.panel-mini-head span {
+  border: 1px solid var(--primary-line);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 760;
+  white-space: nowrap;
+}
+
+.daily-timetable-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.daily-period {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 8px 5px;
+  background: var(--surface-2);
+  text-align: center;
+}
+
+.daily-period span {
+  color: var(--ink-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  font-weight: 650;
+}
+
+.daily-period strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.12;
+  min-height: 1.12em;
+  overflow-wrap: anywhere;
+}
+
+.daily-period.is-current {
+  border-color: rgba(255, 209, 102, 0.55);
+  background: var(--amber-soft);
+}
+
+.daily-period.is-current span,
+.daily-period.is-current strong {
+  color: var(--amber);
+}
+
+.daily-period.is-empty {
+  opacity: 0.48;
+}
+
 .now-panel {
+  min-width: 0;
   justify-content: center;
   align-items: flex-start;
-  gap: 8px;
+  gap: 4px;
+  overflow: hidden;
 }
 
 .now-clock,
@@ -1182,15 +1259,57 @@ body.management-screen main {
 .now-clock {
   color: var(--amber);
   font-family: var(--font-mono);
-  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+  font-size: 1.85rem;
   font-weight: 760;
   line-height: 1;
 }
 
 .now-class {
   color: var(--ink);
-  font-size: 1.08rem;
+  font-size: 0.88rem;
   font-weight: 700;
+}
+
+.environment-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.environment-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1px 6px;
+  align-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 4px 6px;
+  background: var(--surface-2);
+}
+
+.environment-item span {
+  color: var(--ink-subtle);
+  font-size: 0.62rem;
+  font-weight: 760;
+}
+
+.environment-item strong {
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 820;
+  line-height: 1.1;
+}
+
+.environment-item small {
+  grid-column: 1 / -1;
+  color: var(--ink-muted);
+  font-size: 0.62rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .view-stage {
@@ -1576,7 +1695,7 @@ body.management-screen main {
 @media (min-width: 921px) {
   body.tv-screen .dashboard-stage {
     display: grid;
-    grid-template-rows: 0.72fr 2.68fr;
+    grid-template-rows: 1fr 2.4fr;
     gap: 12px;
   }
 

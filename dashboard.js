@@ -58,6 +58,7 @@ const fallbackSchedules = {
 
 let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
 let todaySubjects = Array(7).fill("-");
+let environmentState = null;
 
 const TODAY_SHEET_ID = "1SzXgcGveGAhkl0_SvMlV2t2dRLvIGFZCWg4ybydJHHM";
 const PERIOD_RULES = [
@@ -228,6 +229,66 @@ function periodInfo(now) {
   return "하교 후";
 }
 
+function currentPeriodKey(now) {
+  const nowMinute = minuteOfDay(now);
+  const day = now.getDay();
+  const rule = PERIOD_RULES.find((item) => {
+    if ((item.blockedWeekdays || []).includes(day)) return false;
+    const start = item.start[0] * 60 + item.start[1];
+    const end = item.end[0] * 60 + item.end[1];
+    return nowMinute >= start && nowMinute < end;
+  });
+  return rule?.key || "";
+}
+
+function renderDailyTimetable() {
+  const board = document.querySelector("#daily-timetable-board");
+  if (!board) return;
+
+  const now = getKoreaToday();
+  const day = now.getDay();
+  const activeKey = currentPeriodKey(now);
+  const visibleRules = PERIOD_RULES.filter((rule) => rule.key !== "LUNCH");
+  board.innerHTML = visibleRules.map((rule) => {
+    const isBlocked = (rule.blockedWeekdays || []).includes(day);
+    const subject = isBlocked ? "없음" : todaySubjects[rule.subjectIndex] || "-";
+    return `
+      <div class="daily-period ${activeKey === rule.key ? "is-current" : ""} ${isBlocked ? "is-empty" : ""}">
+        <span>${rule.label}</span>
+        <strong>${escapeHtml(subject)}</strong>
+      </div>`;
+  }).join("");
+
+  const label = document.querySelector("#daily-timetable-period");
+  if (label) label.textContent = periodInfo(now);
+}
+
+async function loadEnvironment() {
+  try {
+    const response = await fetch("/api/environment", { cache: "no-store" });
+    if (!response.ok) throw new Error("Environment API failed");
+    environmentState = await response.json();
+  } catch {
+    environmentState = null;
+  }
+}
+
+function renderEnvironment() {
+  const weatherTemp = document.querySelector("#weather-temp");
+  const weatherDesc = document.querySelector("#weather-desc");
+  const airQuality = document.querySelector("#air-quality");
+  const airDetail = document.querySelector("#air-detail");
+  if (!weatherTemp || !weatherDesc || !airQuality || !airDetail) return;
+
+  const temperature = environmentState?.weather?.temperature;
+  const pm25 = environmentState?.air?.pm25;
+  const pm10 = environmentState?.air?.pm10;
+  weatherTemp.textContent = Number.isFinite(Number(temperature)) ? `${Math.round(Number(temperature))}°C` : "--";
+  weatherDesc.textContent = environmentState?.weather?.label || "정보 없음";
+  airQuality.textContent = environmentState?.air?.label || "--";
+  airDetail.textContent = Number.isFinite(Number(pm25)) ? `PM2.5 ${Math.round(Number(pm25))} · PM10 ${Math.round(Number(pm10) || 0)}` : "정보 없음";
+}
+
 function renderNowPanel() {
   const now = getKoreaToday();
   const clock = now.toLocaleTimeString("ko-KR", {
@@ -240,6 +301,7 @@ function renderNowPanel() {
   const classEl = document.querySelector("#current-class-status");
   if (clockEl) clockEl.textContent = clock;
   if (classEl) classEl.textContent = periodInfo(now);
+  renderDailyTimetable();
 }
 
 function renderSettings() {
@@ -348,17 +410,24 @@ function initViewTabs() {
 async function init() {
   renderLive();
   await loadTodaySubjects();
+  await loadEnvironment();
   dashboardState = await loadState();
   renderSettings();
   renderSchedule();
   renderDutyAndCleaning();
   renderRoles();
   renderSeating();
+  renderDailyTimetable();
   renderNowPanel();
+  renderEnvironment();
   window.setInterval(() => {
     renderLive();
     renderNowPanel();
   }, 1000);
+  window.setInterval(async () => {
+    await loadEnvironment();
+    renderEnvironment();
+  }, 5 * 60 * 1000);
   initViewTabs();
 }
 
