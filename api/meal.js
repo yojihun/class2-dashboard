@@ -23,7 +23,8 @@ module.exports = async (req, res) => {
     Type: "json",
     ATPT_OFCDC_SC_CODE,
     SD_SCHUL_CODE,
-    MLSV_YMD: date
+    MLSV_YMD: date,
+    MMEAL_SC_CODE: "2"
   });
   const key = process.env.NEIS_API_KEY;
   if (key) params.set("KEY", key);
