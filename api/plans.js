@@ -1,4 +1,4 @@
-const { createPlan, listPlans, publishPlan, setActivePlan, toggleTask, updateSettings } = require("./_firestore");
+const { createPlan, listPlans, publishPlan, setActivePlan, toggleTask, editTask, deleteTask, addTask, updateSettings } = require("./_firestore");
 
 function sendJson(res, status, body) {
   res.status(status).json(body);
@@ -36,6 +36,18 @@ module.exports = async (req, res) => {
       }
       if (body.action === "toggleTask") {
         sendJson(res, 200, await toggleTask(body.planId, body.taskId, body.homeroom));
+        return;
+      }
+      if (body.action === "editTask") {
+        sendJson(res, 200, await editTask(body.planId, body.taskId, body.text));
+        return;
+      }
+      if (body.action === "deleteTask") {
+        sendJson(res, 200, await deleteTask(body.planId, body.taskId));
+        return;
+      }
+      if (body.action === "addTask") {
+        sendJson(res, 200, await addTask(body.planId, body.dayIndex, body.text));
         return;
       }
       if (body.action === "updateSettings") {

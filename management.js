@@ -554,27 +554,119 @@ function renderManager() {
       (day) => `
       <section class="plan-day">
         <h3>${DAY_NAMES[day.d]}</h3>
-        ${
-          day.items.length
-            ? day.items
-                .map(
-                  (task) => `
-          <label class="plan-item">
+        ${day.items
+          .map(
+            (task) => `
+          <div class="plan-item">
             <input type="checkbox" data-task-id="${task.id}" ${task.homeroom ? "checked" : ""}>
-            <span>${task.text}</span>
-          </label>`
-                )
-                .join("")
-            : '<p class="empty-day">추출된 항목 없음</p>'
-        }
+            <input type="text" class="task-text-input" data-task-id="${task.id}" data-original="">
+            <button type="button" class="task-delete-btn" data-task-id="${task.id}" title="삭제">×</button>
+          </div>`
+          )
+          .join("")}
+        ${!day.items.length ? '<p class="empty-day">추출된 항목 없음</p>' : ""}
+        <button type="button" class="add-task-btn" data-day="${day.d}">+ 항목 추가</button>
       </section>`
     )
     .join("");
 
+  wrap.querySelectorAll(".task-text-input").forEach((input) => {
+    const task = plan.tasks.find((t) => t.id === input.dataset.taskId);
+    if (task) {
+      input.value = task.text;
+      input.dataset.original = task.text;
+    }
+  });
+
   wrap.querySelectorAll("input[type='checkbox']").forEach((input) => {
     input.addEventListener("change", (e) => toggleHomeroom(e.target.dataset.taskId, e.target.checked));
   });
+
+  wrap.querySelectorAll(".task-text-input").forEach((input) => {
+    input.addEventListener("blur", (e) => {
+      const text = e.target.value.trim();
+      if (!text || text === e.target.dataset.original) return;
+      e.target.dataset.original = text;
+      editTaskText(e.target.dataset.taskId, text);
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") e.target.blur();
+      if (e.key === "Escape") {
+        e.target.value = e.target.dataset.original;
+        e.target.blur();
+      }
+    });
+  });
+
+  wrap.querySelectorAll(".task-delete-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => removeTask(e.currentTarget.dataset.taskId));
+  });
+
+  wrap.querySelectorAll(".add-task-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => addNewTask(Number(e.currentTarget.dataset.day)));
+  });
+
   renderPublishedLabel();
+}
+
+async function editTaskText(taskId, text) {
+  const plan = currentPlan();
+  if (!plan) return;
+  const task = plan.tasks.find((t) => t.id === taskId);
+  if (!task) return;
+  const original = task.text;
+  task.text = text;
+  setDirty(true);
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "editTask", planId: plan.id, taskId, text })
+    });
+  } catch (error) {
+    task.text = original;
+    const input = document.querySelector(`.task-text-input[data-task-id="${taskId}"]`);
+    if (input) { input.value = original; input.dataset.original = original; }
+    document.querySelector("#plan-status").textContent = `수정 실패: ${error.message}`;
+  }
+}
+
+async function removeTask(taskId) {
+  const plan = currentPlan();
+  if (!plan) return;
+  if (!confirm("이 항목을 삭제하시겠습니까?")) return;
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "deleteTask", planId: plan.id, taskId })
+    });
+    renderManager();
+    setDirty(true);
+  } catch (error) {
+    document.querySelector("#plan-status").textContent = `삭제 실패: ${error.message}`;
+  }
+}
+
+async function addNewTask(dayIndex) {
+  const plan = currentPlan();
+  if (!plan) return;
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "addTask", planId: plan.id, dayIndex, text: "새 항목" })
+    });
+    renderManager();
+    setDirty(true);
+    const daySections = document.querySelectorAll(".plan-day");
+    const section = daySections[dayIndex - 1];
+    const inputs = section?.querySelectorAll(".task-text-input");
+    if (inputs?.length) {
+      const last = inputs[inputs.length - 1];
+      last.focus();
+      last.select();
+    }
+  } catch (error) {
+    document.querySelector("#plan-status").textContent = `추가 실패: ${error.message}`;
+  }
 }
 
 function bindEvents() {

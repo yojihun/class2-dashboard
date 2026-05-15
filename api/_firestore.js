@@ -218,6 +218,35 @@ async function toggleTask(planId, taskId, homeroom) {
   return listPlans();
 }
 
+async function editTask(planId, taskId, text) {
+  await taskRef(planId, taskId).set(
+    { text: String(text || "").trim(), updatedAt: new Date().toISOString() },
+    { merge: true }
+  );
+  return listPlans();
+}
+
+async function deleteTask(planId, taskId) {
+  await taskRef(planId, taskId).delete();
+  return listPlans();
+}
+
+async function addTask(planId, dayIndex, text) {
+  const now = new Date().toISOString();
+  const existing = await planRef(planId).collection("tasks").orderBy("order", "desc").limit(1).get();
+  const nextOrder = existing.empty ? 0 : (existing.docs[0].data().order || 0) + 1;
+  const ref = planRef(planId).collection("tasks").doc();
+  await ref.set({
+    dayIndex: Number(dayIndex) || 0,
+    text: String(text || "").trim(),
+    homeroom: false,
+    order: nextOrder,
+    createdAt: now,
+    updatedAt: now
+  });
+  return listPlans();
+}
+
 async function updateSettings(settings) {
   await db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]).set(
     { settings: settingsForFirestore(settings), updatedAt: new Date().toISOString() },
@@ -232,6 +261,9 @@ module.exports = {
   publishPlan,
   setActivePlan,
   toggleTask,
+  editTask,
+  deleteTask,
+  addTask,
   updateSettings,
   DEFAULT_SETTINGS
 };
