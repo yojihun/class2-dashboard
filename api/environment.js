@@ -1,5 +1,5 @@
-const SCHOOL_LATITUDE = 37.467;
-const SCHOOL_LONGITUDE = 126.932;
+const GWANAK_LATITUDE = 37.467;
+const GWANAK_LONGITUDE = 126.932;
 
 function weatherLabel(code) {
   const labels = {
@@ -60,16 +60,16 @@ module.exports = async (req, res) => {
   try {
     const weatherUrl = new URL("https://api.open-meteo.com/v1/forecast");
     weatherUrl.search = new URLSearchParams({
-      latitude: String(SCHOOL_LATITUDE),
-      longitude: String(SCHOOL_LONGITUDE),
+      latitude: String(GWANAK_LATITUDE),
+      longitude: String(GWANAK_LONGITUDE),
       current: "temperature_2m,weather_code",
       timezone: "Asia/Seoul"
     }).toString();
 
     const airUrl = new URL("https://air-quality-api.open-meteo.com/v1/air-quality");
     airUrl.search = new URLSearchParams({
-      latitude: String(SCHOOL_LATITUDE),
-      longitude: String(SCHOOL_LONGITUDE),
+      latitude: String(GWANAK_LATITUDE),
+      longitude: String(GWANAK_LONGITUDE),
       hourly: "pm10,pm2_5",
       timezone: "Asia/Seoul"
     }).toString();
