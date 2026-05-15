@@ -17,9 +17,29 @@
       </nav>
       <div class="hero-grid dashboard-hero-grid">
         <section class="hero-copy hero-copy-compact">
-          <div class="hero-meta">
-            <span id="live-date">날짜 불러오는 중...</span>
-            <span id="school-day">요일 불러오는 중...</span>
+          <div class="info-head-row">
+            <div class="info-head-class">
+              <span>반:</span>
+              <strong>1학년 2반</strong>
+            </div>
+            <div class="info-head-date">
+              <strong id="live-date">날짜 불러오는 중...</strong>
+              <span id="school-day">요일 불러오는 중...</span>
+            </div>
+            <div class="info-head-metric">
+              <span>공기질:</span>
+              <strong id="air-quality">--</strong>
+              <small id="air-detail">불러오는 중</small>
+            </div>
+            <div class="info-head-metric">
+              <span>현재날씨:</span>
+              <strong id="weather-desc">불러오는 중</strong>
+              <small id="weather-temp">--</small>
+            </div>
+            <div class="info-head-schedule">
+              <span>시간표:</span>
+              <div id="daily-timetable-board" class="daily-timetable-board"></div>
+            </div>
           </div>
         </section>
       </div>
@@ -53,29 +73,10 @@
           <p class="section-kicker">오늘의 한마디</p>
           <blockquote id="daily-quote">작은 준비가 하루를 덜 흔들리게 만든다.</blockquote>
         </article>
-        <article class="panel day-timetable-panel">
-          <div class="panel-mini-head">
-            <p class="section-kicker">오늘 시간표</p>
-            <span id="daily-timetable-period">불러오는 중...</span>
-          </div>
-          <div id="daily-timetable-board" class="daily-timetable-board"></div>
-        </article>
         <article class="panel now-panel">
           <p class="section-kicker">지금</p>
           <p id="current-clock" class="now-clock">--:--</p>
           <p id="current-class-status" class="now-class">교시 정보 불러오는 중...</p>
-          <div class="environment-grid" aria-label="날씨와 공기질">
-            <div class="environment-item">
-              <span>현재날씨</span>
-              <strong id="weather-temp">--</strong>
-              <small id="weather-desc">불러오는 중</small>
-            </div>
-            <div class="environment-item">
-              <span>공기질</span>
-              <strong id="air-quality">--</strong>
-              <small id="air-detail">불러오는 중</small>
-            </div>
-          </div>
         </article>
       </section>
 

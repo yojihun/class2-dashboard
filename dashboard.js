@@ -252,9 +252,10 @@ function renderDailyTimetable() {
   board.innerHTML = visibleRules.map((rule) => {
     const isBlocked = (rule.blockedWeekdays || []).includes(day);
     const subject = isBlocked ? "없음" : todaySubjects[rule.subjectIndex] || "-";
+    if (!subject || subject === "-" || subject === "없음") return "";
     return `
       <div class="daily-period ${activeKey === rule.key ? "is-current" : ""} ${isBlocked ? "is-empty" : ""}">
-        <span>${rule.label}</span>
+        <span>${rule.key}.</span>
         <strong>${escapeHtml(subject)}</strong>
       </div>`;
   }).join("");
@@ -283,10 +284,10 @@ function renderEnvironment() {
   const temperature = environmentState?.weather?.temperature;
   const pm25 = environmentState?.air?.pm25;
   const pm10 = environmentState?.air?.pm10;
-  weatherTemp.textContent = Number.isFinite(Number(temperature)) ? `${Math.round(Number(temperature))}°C` : "--";
-  weatherDesc.textContent = environmentState?.weather?.label || "정보 없음";
+  weatherTemp.textContent = Number.isFinite(Number(temperature)) ? `${Math.round(Number(temperature))}°C` : "";
+  weatherDesc.textContent = environmentState?.weather?.label || "--";
   airQuality.textContent = environmentState?.air?.label || "--";
-  airDetail.textContent = Number.isFinite(Number(pm25)) ? `PM2.5 ${Math.round(Number(pm25))} · PM10 ${Math.round(Number(pm10) || 0)}` : "정보 없음";
+  airDetail.textContent = Number.isFinite(Number(pm25)) ? `(${Math.round(Number(pm25))}μg/m³)` : "";
 }
 
 function renderNowPanel() {
