@@ -5,9 +5,20 @@ const VIEW_ORDER = ["schedule", "duties", "roles", "seating"];
 const students = ["고성민", "고희경", "권율", "김규리", "김선민", "박지성", "변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민", "전효민", "조예지", "최승우", "최영민", "한병민", "황수미"];
 const cleaningAssignments = ["쓸기1", "쓸기2", "쓸기3", "바닦1", "바닦2", "휴지통1", "휴지통2", "닦기1", "닦기2", "닦기3", "닦기4", "교탁정리", "꿈담카페1", "꿈담카페2", "꿈담카페3", "2-2계단1", "2-2계단2", "2-2계단3"];
 const defaultRoles = [
-  ["학급 회장", "고성민"], ["학급 부회장", "고희경"], ["출석 확인", "권율"], ["알림장", "김규리"], ["과제 리마인더", "김선민"], ["기자재 점검", "박지성"],
-  ["칠판 관리", "변지현"], ["분리수거", "여서정"], ["학습 분위기", "유리한"], ["문단속", "윤규태"], ["환기", "이윤재"], ["사물함 점검", "이현민"],
-  ["급식 안내", "전효민"], ["게시판", "조예지"], ["체육 준비", "최승우"], ["도서 관리", "최영민"], ["행사 기록", "한병민"], ["칭찬 릴레이", "황수미"]
+  ["고민상담/연애상담", "최승우"],
+  ["급식알리미", "전효민"],
+  ["노래추천", "한병민"],
+  ["노션관리1", "윤규태"],
+  ["노션관리2", "이윤재"],
+  ["명언추천", "유리한"],
+  ["사진찍기1", "김규리"],
+  ["사진찍기2", "최영민"],
+  ["아침 출석부 열쇠. 건의사항/고민 쪽지", "황수미"],
+  ["환기담당1", "이현민"],
+  ["환기담당2", "조예지"],
+  ["청소도구정리", "여서정"],
+  ["핸드폰 돌려주기(종례)", "고성민"],
+  ["핸드폰 수거(조회 전)·디벗", "김선민"]
 ];
 const defaultSeatingRows = [
   ["고성민", "고희경", "권율", "김규리", "김선민", "박지성"],
@@ -46,6 +57,20 @@ const fallbackSchedules = {
 };
 
 let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
+let todaySubjects = Array(7).fill("-");
+
+const TODAY_SHEET_ID = "1wn0iUCjxhiWxHDV3Ia1bBQyDyOEnvB_OHBc7tL0kDeE";
+const TODAY_SHEET_GID = "556197737";
+const PERIOD_RULES = [
+  { key: "1", label: "1교시", subjectIndex: 0, start: [8, 20], end: [9, 10] },
+  { key: "2", label: "2교시", subjectIndex: 1, start: [9, 20], end: [10, 10] },
+  { key: "3", label: "3교시", subjectIndex: 2, start: [10, 20], end: [11, 10] },
+  { key: "4", label: "4교시", subjectIndex: 3, start: [11, 20], end: [12, 10] },
+  { key: "LUNCH", label: "점심시간", subjectIndex: null, start: [12, 10], end: [13, 0] },
+  { key: "5", label: "5교시", subjectIndex: 4, start: [13, 0], end: [13, 50] },
+  { key: "6", label: "6교시", subjectIndex: 5, start: [14, 0], end: [14, 50] },
+  { key: "7", label: "7교시", subjectIndex: 6, start: [15, 0], end: [15, 50], blockedWeekdays: [1, 5] }
+];
 
 function mergeSettings(settings = {}) {
   return {
@@ -137,8 +162,74 @@ function escapeHtml(value) {
 
 function renderLive() {
   const today = getKoreaToday();
-  document.querySelector("#live-date").textContent = today.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" });
-  document.querySelector("#school-day").textContent = `${DAY_NAMES[today.getDay()]}요일`;
+  const dateEl = document.querySelector("#live-date");
+  const dayEl = document.querySelector("#school-day");
+  if (dateEl) dateEl.textContent = today.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" });
+  if (dayEl) dayEl.textContent = `${DAY_NAMES[today.getDay()]}요일`;
+}
+
+function parseGvizResponse(text) {
+  const match = String(text).match(/google\.visualization\.Query\.setResponse\(([\s\S]+)\);?$/);
+  if (!match) throw new Error("Invalid gviz response");
+  return JSON.parse(match[1]);
+}
+
+function cellValue(cell) {
+  if (!cell) return "-";
+  const raw = cell.formattedValue ?? cell.v ?? "-";
+  return String(raw).trim() || "-";
+}
+
+async function loadTodaySubjects() {
+  const url = `https://docs.google.com/spreadsheets/d/${TODAY_SHEET_ID}/gviz/tq?gid=${TODAY_SHEET_GID}&range=Q7:W7&tqx=out:json`;
+  try {
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("Sheet request failed");
+    const text = await response.text();
+    const parsed = parseGvizResponse(text);
+    const row = parsed?.table?.rows?.[0]?.c || [];
+    todaySubjects = Array.from({ length: 7 }, (_, index) => cellValue(row[index]));
+  } catch {
+    todaySubjects = Array(7).fill("-");
+  }
+}
+
+function minuteOfDay(date) {
+  return date.getHours() * 60 + date.getMinutes();
+}
+
+function periodInfo(now) {
+  const nowMinute = minuteOfDay(now);
+  const day = now.getDay();
+  const activeRules = PERIOD_RULES.filter((rule) => !(rule.blockedWeekdays || []).includes(day));
+  for (let i = 0; i < activeRules.length; i += 1) {
+    const rule = activeRules[i];
+    const start = rule.start[0] * 60 + rule.start[1];
+    const end = rule.end[0] * 60 + rule.end[1];
+    if (nowMinute >= start && nowMinute < end) {
+      if (rule.key === "LUNCH") return "점심시간";
+      const subject = todaySubjects[rule.subjectIndex] || "-";
+      return `${rule.label} ${subject}`;
+    }
+    if (nowMinute < start) {
+      return i === 0 ? "등교 전" : "쉬는 시간";
+    }
+  }
+  return "하교 후";
+}
+
+function renderNowPanel() {
+  const now = getKoreaToday();
+  const clock = now.toLocaleTimeString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+  const clockEl = document.querySelector("#current-clock");
+  const classEl = document.querySelector("#current-class-status");
+  if (clockEl) clockEl.textContent = clock;
+  if (classEl) classEl.textContent = periodInfo(now);
 }
 
 function renderSettings() {
@@ -263,12 +354,18 @@ function initViewRotation() {
 
 async function init() {
   renderLive();
+  await loadTodaySubjects();
   dashboardState = await loadState();
   renderSettings();
   renderSchedule();
   renderDutyAndCleaning();
   renderRoles();
   renderSeating();
+  renderNowPanel();
+  window.setInterval(() => {
+    renderLive();
+    renderNowPanel();
+  }, 1000);
   initViewRotation();
 }
 

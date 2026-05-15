@@ -1078,7 +1078,7 @@ body.management-screen main {
 
 .dashboard-shell-hero {
   min-height: auto;
-  padding: 18px 28px 12px;
+  padding: 10px 24px 8px;
 }
 
 .dashboard-hero-grid {
@@ -1089,7 +1089,17 @@ body.management-screen main {
 
 .dashboard-tabs {
   justify-content: center;
-  margin: 0 auto 14px;
+  margin: 0 auto 8px;
+}
+
+.hero-copy-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-copy-compact .hero-meta {
+  margin-top: 0;
 }
 
 .view-tab,
@@ -1122,13 +1132,13 @@ body.management-screen main {
 
 .dashboard-stage {
   display: grid;
-  grid-template-rows: 0.9fr 2.5fr;
+  grid-template-rows: 0.72fr 2.68fr;
   gap: 12px;
 }
 
 .fixed-board {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.8fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.1fr) minmax(240px, 0.75fr);
   gap: 12px;
   min-height: 0;
 }
@@ -1142,20 +1152,45 @@ body.management-screen main {
 }
 
 .message-panel h2 {
-  font-size: 2.2rem;
+  font-size: 1.5rem;
 }
 
 .message-panel p:last-child,
 .quote-panel blockquote {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   color: var(--ink-muted);
-  font-size: 1.32rem;
+  font-size: 1rem;
   font-weight: 620;
   line-height: 1.38;
 }
 
 .quote-panel blockquote {
   color: var(--amber);
+}
+
+.now-panel {
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.now-clock,
+.now-class {
+  margin: 0;
+}
+
+.now-clock {
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: clamp(1.9rem, 2.6vw, 2.6rem);
+  font-weight: 760;
+  line-height: 1;
+}
+
+.now-class {
+  color: var(--ink);
+  font-size: 1.08rem;
+  font-weight: 700;
 }
 
 .view-stage {
@@ -1291,16 +1326,16 @@ body.management-screen main {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .role-board .role-item {
   min-height: 0;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  gap: 6px;
-  padding: 12px;
+  gap: 8px;
+  padding: 14px;
 }
 
 .role-board .role-item span {
@@ -1312,8 +1347,8 @@ body.management-screen main {
 
 .role-board .role-item strong {
   color: var(--ink);
-  font-size: 0.96rem;
-  line-height: 1.25;
+  font-size: 1.18rem;
+  line-height: 1.24;
 }
 
 .role-board .role-item p {
@@ -1324,6 +1359,7 @@ body.management-screen main {
   padding: 3px 9px;
   background: var(--primary-soft);
   color: var(--primary);
+  font-size: 1rem;
   font-weight: 760;
 }
 
@@ -1378,17 +1414,13 @@ body.management-screen main {
 
 @media (min-width: 921px) {
   body.tv-screen .dashboard-shell-hero {
-    height: 22vh;
+    height: 11vh;
   }
 
   body.tv-screen .dashboard-stage {
     width: min(98vw, 1920px);
-    height: 73vh;
-    margin-top: 6px;
-  }
-
-  body.tv-screen .hero-text {
-    max-width: 920px;
+    height: 84vh;
+    margin-top: 4px;
   }
 
   body.tv-screen footer {
@@ -1449,6 +1481,10 @@ body.management-screen main {
   .duty-cleaning-layout,
   .role-board {
     grid-template-columns: 1fr;
+  }
+
+  .now-panel {
+    align-items: flex-start;
   }
 
   .view-stage {
@@ -1512,7 +1548,7 @@ body.management-screen main {
 @media (min-width: 921px) {
   body.tv-screen .dashboard-stage {
     display: grid;
-    grid-template-rows: 0.9fr 2.5fr;
+    grid-template-rows: 0.72fr 2.68fr;
     gap: 12px;
   }
 
