@@ -60,6 +60,7 @@ let dashboardState = { plans: [], activePlanId: null, publishedPlanId: null, set
 let todaySubjects = Array(7).fill("-");
 let environmentState = null;
 let mealState = null;
+let stateSignature = "";
 
 const TODAY_SHEET_ID = "1SzXgcGveGAhkl0_SvMlV2t2dRLvIGFZCWg4ybydJHHM";
 const PERIOD_RULES = [
@@ -81,6 +82,35 @@ function mergeSettings(settings = {}) {
     roles: Array.isArray(settings.roles) && settings.roles.length ? settings.roles : defaultSettings.roles,
     seatingRows: Array.isArray(settings.seatingRows) && settings.seatingRows.length ? settings.seatingRows : defaultSettings.seatingRows
   };
+}
+
+function buildStateSignature(state) {
+  if (!state) return "";
+  const plan = resolveDashboardPlan(state);
+  const taskSignature = (plan?.tasks || [])
+    .map((task) => `${task.id}:${task.dayIndex}:${task.homeroom ? 1 : 0}:${task.text}`)
+    .join("|");
+
+  return JSON.stringify({
+    activePlanId: state.activePlanId || "",
+    publishedPlanId: state.publishedPlanId || "",
+    settings: state.settings || {},
+    taskSignature
+  });
+}
+
+async function syncDashboardState() {
+  const latest = await loadState();
+  const latestSignature = buildStateSignature(latest);
+  if (!latestSignature || latestSignature === stateSignature) return;
+
+  dashboardState = latest;
+  stateSignature = latestSignature;
+  renderSettings();
+  renderSchedule();
+  renderDutyAndCleaning();
+  renderRoles();
+  renderSeating();
 }
 
 async function loadState() {
@@ -496,6 +526,7 @@ async function init() {
   renderLive();
   await Promise.all([loadTodaySubjects(), loadEnvironment(), loadMeal()]);
   dashboardState = await loadState();
+  stateSignature = buildStateSignature(dashboardState);
   renderSettings();
   renderSchedule();
   renderDutyAndCleaning();
@@ -517,17 +548,10 @@ async function init() {
     await loadMeal();
     renderMeal();
   }, 60 * 60 * 1000);
+  window.setInterval(() => {
+    syncDashboardState().catch(() => {});
+  }, 10 * 1000);
   initViewTabs();
 }
 
 init();
-
-(function scaleToFit() {
-  const REF_W = 1920, REF_H = 1080;
-  function scale() {
-    const z = Math.min(window.innerWidth / REF_W, window.innerHeight / REF_H);
-    document.documentElement.style.zoom = z.toFixed(4);
-  }
-  scale();
-  window.addEventListener("resize", scale);
-})();
