@@ -1628,6 +1628,47 @@ body.manager-locked footer {
   flex-direction: column;
 }
 
+.schedule-nav-wrap {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.schedule-nav-btn {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 3.5rem;
+  font-weight: 200;
+  line-height: 1;
+  opacity: 0.1;
+  z-index: 5;
+  padding: 0;
+  transition: opacity 0.2s;
+}
+
+.schedule-nav-btn:hover {
+  opacity: 0.7;
+}
+
+.schedule-nav-prev {
+  left: 0;
+}
+
+.schedule-nav-next {
+  right: 0;
+}
+
 .schedule-board {
   min-height: 0;
   flex: 1;

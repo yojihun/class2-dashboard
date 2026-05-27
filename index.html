@@ -97,8 +97,12 @@
 
       <section class="view-stage" aria-live="polite">
         <article id="view-schedule" class="panel view-panel is-active" data-view-panel="schedule">
-          <div class="panel-head"><div><p class="section-kicker">Weekly Plan</p></div></div>
-          <div id="schedule-board" class="schedule-board"></div>
+          <div class="panel-head"><div><p class="section-kicker">Weekly Plan</p></div><span id="week-offset-label" class="badge muted">이번 주</span></div>
+          <div class="schedule-nav-wrap">
+            <button class="schedule-nav-btn schedule-nav-prev" id="schedule-prev" aria-label="이전 주">&#8249;</button>
+            <div id="schedule-board" class="schedule-board"></div>
+            <button class="schedule-nav-btn schedule-nav-next" id="schedule-next" aria-label="다음 주">&#8250;</button>
+          </div>
         </article>
 
         <article id="view-duties" class="panel view-panel" data-view-panel="duties">

@@ -61,6 +61,7 @@ let todaySubjects = Array(7).fill("-");
 let environmentState = null;
 let mealState = null;
 let stateSignature = "";
+let weekOffset = 0;
 
 const TODAY_SHEET_ID = "1SzXgcGveGAhkl0_SvMlV2t2dRLvIGFZCWg4ybydJHHM";
 const PERIOD_RULES = [
@@ -440,25 +441,36 @@ function renderSettings() {
   document.querySelector("#compact-links").innerHTML = quickLinks.map((link) => `<a href="${escapeHtml(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.label)}</a>`).join("");
 }
 
+function weekOffsetLabel(offset) {
+  if (offset === 0) return "이번 주";
+  if (offset === 1) return "다음 주";
+  if (offset === -1) return "저번 주";
+  return offset > 0 ? `${offset}주 후` : `${Math.abs(offset)}주 전`;
+}
+
 function renderSchedule() {
   const plan = resolveDashboardPlan(dashboardState);
   const today = getKoreaToday().getDay();
-  const homeroomTasks = plan ? plan.tasks.filter((t) => t.homeroom) : [];
+  const homeroomTasks = weekOffset === 0 && plan ? plan.tasks.filter((t) => t.homeroom) : [];
   const todos = dashboardState.todos || [];
   const board = document.querySelector("#schedule-board");
-  const weekStart = inferPlanWeekStart(plan);
+  const weekStart = addDays(inferPlanWeekStart(plan), weekOffset * 7);
+
+  const offsetLabel = document.querySelector("#week-offset-label");
+  if (offsetLabel) offsetLabel.textContent = weekOffsetLabel(weekOffset);
 
   board.innerHTML = [1, 2, 3, 4, 5].map((dayIndex) => {
     const tasks = homeroomTasks.filter((task) => task.dayIndex === dayIndex);
-    const rows = tasks.length ? tasks : (!plan && dayIndex === today ? fallbackSchedules[today] || [] : []);
-    const isToday = dayIndex === today;
+    const rows = tasks.length ? tasks : (weekOffset === 0 && !plan && dayIndex === today ? fallbackSchedules[today] || [] : []);
+    const isToday = weekOffset === 0 && dayIndex === today;
     const dayDate = addDays(weekStart, dayIndex - 1);
     const dayTodos = todos.filter((todo) => todo.dueDate === isoDate(dayDate));
     const empty = !rows.length && !dayTodos.length;
+    const dayLabel = `${formatMonthDay(dayDate)} ${DAY_NAMES_LONG[dayIndex]}`;
 
     return `
       <section class="schedule-day ${isToday ? "is-today" : ""}">
-        <div class="schedule-day-head"><span>${formatScheduleDayLabel(plan, dayIndex)}</span><strong>${rows.length + dayTodos.length}</strong></div>
+        <div class="schedule-day-head"><span>${dayLabel}</span><strong>${rows.length + dayTodos.length}</strong></div>
         <ul>
           ${dayTodos.map((todo) => `
             <li class="todo-item">
@@ -476,6 +488,17 @@ function renderSchedule() {
 
   const maxDayCount = Math.max(...[1, 2, 3, 4, 5].map((dayIndex) => homeroomTasks.filter((task) => task.dayIndex === dayIndex).length), 0);
   board.classList.toggle("is-dense", maxDayCount > 9);
+}
+
+function initScheduleNav() {
+  document.querySelector("#schedule-prev")?.addEventListener("click", () => {
+    weekOffset -= 1;
+    renderSchedule();
+  });
+  document.querySelector("#schedule-next")?.addEventListener("click", () => {
+    weekOffset += 1;
+    renderSchedule();
+  });
 }
 
 function getDutyInfo() {
@@ -588,6 +611,7 @@ async function init() {
     syncDashboardState().catch(() => {});
   }, 10 * 1000);
   initViewTabs();
+  initScheduleNav();
 }
 
 init();
