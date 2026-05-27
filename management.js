@@ -106,6 +106,12 @@ function normalize(text) {
   return String(text || "").normalize("NFC").replace(/\s+/g, " ").trim();
 }
 
+function collapseSpacedChars(text) {
+  // PDF extraction often inserts spaces between every Korean syllable block.
+  // Collapse runs of single Korean characters separated by spaces back into words.
+  return String(text).replace(/([가-힣]) (?=[가-힣])/g, "$1");
+}
+
 function inferRange(fileName) {
   const name = normalize(fileName);
   const year = Number((name.match(/(20\d{2})/) || [])[1] || new Date().getFullYear());
@@ -227,7 +233,7 @@ function parsePdfLocally(lines) {
     tasks.push({
       id: crypto.randomUUID(),
       dayIndex: currentTask.dayIndex,
-      text: detailText ? `${currentTask.title} (${detailText})` : currentTask.title,
+      text: collapseSpacedChars(detailText ? `${currentTask.title} (${detailText})` : currentTask.title),
       homeroom: false
     });
     currentTask = null;
@@ -287,7 +293,7 @@ function mapGeminiTasks(rawTasks) {
       return {
         id: crypto.randomUUID(),
         dayIndex,
-        text: details.length ? `${item.task} (${details.join(" / ")})` : item.task,
+        text: collapseSpacedChars(details.length ? `${item.task} (${details.join(" / ")})` : item.task),
         homeroom: false
       };
     })
