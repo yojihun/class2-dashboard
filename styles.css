@@ -2232,8 +2232,8 @@ body.manager-locked footer {
 
 .manager-layout {
   display: grid;
-  grid-template-columns: minmax(360px, 0.85fr) minmax(0, 1.15fr);
-  gap: 14px;
+  grid-template-columns: minmax(320px, 1fr) minmax(0, 1.6fr);
+  gap: 16px;
   align-items: start;
 }
 
@@ -2287,6 +2287,31 @@ body.manager-locked footer {
   grid-column: span 2;
 }
 
+.settings-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings-grid .span-full,
+.settings-grid-3 .span-full {
+  grid-column: 1 / -1;
+}
+
+.settings-group-label {
+  grid-column: 1 / -1;
+  margin: 6px 0 -2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--hairline);
+  color: var(--ink-subtle);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.settings-group-label:first-child {
+  margin-top: 0;
+}
+
 .manager-head.slim {
   grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr);
   margin-bottom: 0;
@@ -2294,10 +2319,6 @@ body.manager-locked footer {
 
 .compact-actions {
   margin-bottom: 0;
-}
-
-.todo-form-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .todo-list {
@@ -2331,8 +2352,8 @@ body.manager-locked footer {
 }
 
 .compact-plan-tasks {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-height: 58vh;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-height: 65vh;
   overflow: auto;
   padding-right: 4px;
 }
@@ -2346,11 +2367,12 @@ body.management-screen .hero.management-hero {
     grid-template-columns: 1fr;
   }
 
-  .todo-form-grid {
+  .settings-grid-3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .compact-plan-tasks {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-height: none;
   }
 }
@@ -2362,13 +2384,15 @@ body.management-screen .hero.management-hero {
   }
 
   .settings-grid,
-  .todo-form-grid,
+  .settings-grid-3,
   .manager-head.slim,
   .compact-plan-tasks {
     grid-template-columns: 1fr;
   }
 
-  .settings-grid .span-2 {
+  .settings-grid .span-2,
+  .settings-grid .span-full,
+  .settings-grid-3 .span-full {
     grid-column: auto;
   }
 }

@@ -33,45 +33,11 @@
 
     <main class="manager-main">
       <section class="manager-layout">
-        <article class="panel manager-panel">
-          <div class="section-title"><div><p class="section-kicker">Dashboard</p><h2>대시보드 설정</h2></div></div>
-          <div class="settings-grid">
-            <label>담임 이름<input id="teacher-name-input" type="text"></label>
-            <label>담당 교과<input id="teacher-subject-input" type="text"></label>
-            <label>교무실<input id="teacher-office-input" type="text"></label>
-            <label>연락처<input id="teacher-phone-input" type="text"></label>
-            <label>Instagram 표시<input id="teacher-instagram-input" type="text"></label>
-            <label>Instagram 링크<input id="teacher-instagram-url-input" type="url"></label>
-            <label class="span-2">담임샘 메시지 제목<input id="message-title-input" type="text"></label>
-            <label class="span-2">담임샘 메시지<textarea id="message-body-input" rows="3"></textarea></label>
-            <label class="span-2">오늘의 한마디<input id="quote-input" type="text"></label>
-            <label class="span-2">모바일 링크 <small>한 줄에 하나씩: 이름 | URL</small><textarea id="quick-links-input" rows="4"></textarea></label>
-            <label class="span-2">1인1역할 <small>한 줄에 하나씩: 역할 | 학생이름</small><textarea id="roles-input" rows="8"></textarea></label>
-            <label class="span-2">자리배치 <small>한 줄이 한 줄 좌석입니다. 이름은 쉼표로 구분</small><textarea id="seating-input" rows="5"></textarea></label>
-          </div>
-          <div class="manager-actions compact-actions">
-            <button id="save-settings-btn" type="button">대시보드 설정 저장</button>
-            <span id="settings-status">설정을 불러오는 중입니다...</span>
-          </div>
-        </article>
 
+        <!-- 1. 할일 (To-Do) ─ top left -->
         <article class="panel manager-panel">
-          <div class="section-title"><div><p class="section-kicker">Weekly PDF</p><h2>주간 일정</h2></div></div>
-          <div class="manager-head slim">
-            <input id="weekly-pdf-input" type="file" accept="application/pdf">
-            <select id="plan-select" aria-label="주간 계획 선택"></select>
-          </div>
-          <div class="manager-actions compact-actions">
-            <button id="save-plan-btn" type="button">선택 일정 반영</button>
-            <span id="published-plan-label">현재 반영: 없음</span>
-          </div>
-          <div id="plan-status" class="plan-status">아직 업로드된 주간 업무가 없습니다.</div>
-          <div id="plan-tasks" class="plan-tasks compact-plan-tasks"></div>
-        </article>
-
-        <article class="panel manager-panel manager-panel-full">
           <div class="section-title"><div><p class="section-kicker">Homework / Tasks</p><h2>할일 (To-Do)</h2></div></div>
-          <div class="settings-grid todo-form-grid">
+          <div class="settings-grid">
             <label>마감 날짜<input id="todo-date-input" type="date"></label>
             <label>교시<select id="todo-period-input">
               <option value="">교시 없음</option>
@@ -92,6 +58,48 @@
           </div>
           <div id="todo-list" class="todo-list"></div>
         </article>
+
+        <!-- 2. 주간 일정 ─ top right -->
+        <article class="panel manager-panel">
+          <div class="section-title"><div><p class="section-kicker">Weekly PDF</p><h2>주간 일정</h2></div></div>
+          <div class="manager-head slim">
+            <input id="weekly-pdf-input" type="file" accept="application/pdf">
+            <select id="plan-select" aria-label="주간 계획 선택"></select>
+          </div>
+          <div class="manager-actions compact-actions">
+            <button id="save-plan-btn" type="button">선택 일정 반영</button>
+            <span id="published-plan-label">현재 반영: 없음</span>
+          </div>
+          <div id="plan-status" class="plan-status">아직 업로드된 주간 업무가 없습니다.</div>
+          <div id="plan-tasks" class="plan-tasks compact-plan-tasks"></div>
+        </article>
+
+        <!-- 3. 대시보드 설정 ─ full-width bottom -->
+        <article class="panel manager-panel manager-panel-full">
+          <div class="section-title"><div><p class="section-kicker">Dashboard</p><h2>대시보드 설정</h2></div></div>
+          <div class="settings-grid settings-grid-3">
+            <p class="settings-group-label">선생님 정보</p>
+            <label>담임 이름<input id="teacher-name-input" type="text"></label>
+            <label>담당 교과<input id="teacher-subject-input" type="text"></label>
+            <label>교무실<input id="teacher-office-input" type="text"></label>
+            <label>연락처<input id="teacher-phone-input" type="text"></label>
+            <label>Instagram 표시<input id="teacher-instagram-input" type="text"></label>
+            <label>Instagram 링크<input id="teacher-instagram-url-input" type="url"></label>
+            <p class="settings-group-label">메시지</p>
+            <label class="span-full">담임샘 메시지 제목<input id="message-title-input" type="text"></label>
+            <label class="span-full">담임샘 메시지<textarea id="message-body-input" rows="3"></textarea></label>
+            <label class="span-full">오늘의 한마디<input id="quote-input" type="text"></label>
+            <p class="settings-group-label">링크 · 역할 · 자리배치</p>
+            <label class="span-full">모바일 링크 <small>한 줄에 하나씩: 이름 | URL</small><textarea id="quick-links-input" rows="4"></textarea></label>
+            <label class="span-full">1인1역할 <small>한 줄에 하나씩: 역할 | 학생이름</small><textarea id="roles-input" rows="8"></textarea></label>
+            <label class="span-full">자리배치 <small>한 줄이 한 줄 좌석입니다. 이름은 쉼표로 구분</small><textarea id="seating-input" rows="5"></textarea></label>
+          </div>
+          <div class="manager-actions compact-actions">
+            <button id="save-settings-btn" type="button">대시보드 설정 저장</button>
+            <span id="settings-status">설정을 불러오는 중입니다...</span>
+          </div>
+        </article>
+
       </section>
     </main>
 
