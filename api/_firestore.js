@@ -103,6 +103,15 @@ function sanitizeSettings(settings = {}) {
   };
 }
 
+function pruneTodos(todos) {
+  if (!Array.isArray(todos)) return [];
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+  const cutoff = new Date(today + "T00:00:00+09:00");
+  cutoff.setDate(cutoff.getDate() - 7);
+  const cutoffStr = cutoff.toLocaleDateString("en-CA", { timeZone: "Asia/Seoul" });
+  return todos.filter((t) => !t.dueDate || t.dueDate >= cutoffStr);
+}
+
 function settingsForFirestore(settings) {
   const clean = sanitizeSettings(settings);
   return {
@@ -127,7 +136,7 @@ async function getConfig() {
     activePlanId: data.activePlanId || null,
     publishedPlanId: data.publishedPlanId || null,
     settings: sanitizeSettings(data.settings || DEFAULT_SETTINGS),
-    todos: Array.isArray(data.todos) ? data.todos : []
+    todos: pruneTodos(data.todos)
   };
 }
 
@@ -269,7 +278,7 @@ async function addTodo(todo) {
   if (!clean.dueDate || !clean.task) throw new Error("dueDate and task are required");
   const ref = db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]);
   const snap = await ref.get();
-  const current = Array.isArray(snap.data()?.todos) ? snap.data().todos : [];
+  const current = pruneTodos(snap.data()?.todos);
   await ref.set({ todos: [...current, clean], updatedAt: now }, { merge: true });
   return listPlans();
 }
@@ -278,7 +287,7 @@ async function deleteTodo(todoId) {
   const now = new Date().toISOString();
   const ref = db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]);
   const snap = await ref.get();
-  const current = Array.isArray(snap.data()?.todos) ? snap.data().todos : [];
+  const current = pruneTodos(snap.data()?.todos);
   await ref.set({ todos: current.filter((t) => t.id !== String(todoId)), updatedAt: now }, { merge: true });
   return listPlans();
 }
