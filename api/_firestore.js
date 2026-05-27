@@ -126,7 +126,8 @@ async function getConfig() {
   return {
     activePlanId: data.activePlanId || null,
     publishedPlanId: data.publishedPlanId || null,
-    settings: sanitizeSettings(data.settings || DEFAULT_SETTINGS)
+    settings: sanitizeSettings(data.settings || DEFAULT_SETTINGS),
+    todos: Array.isArray(data.todos) ? data.todos : []
   };
 }
 
@@ -255,6 +256,33 @@ async function updateSettings(settings) {
   return listPlans();
 }
 
+async function addTodo(todo) {
+  const now = new Date().toISOString();
+  const clean = {
+    id: String(todo.id || "").trim() || require("crypto").randomUUID(),
+    dueDate: String(todo.dueDate || "").trim(),
+    period: String(todo.period || "").trim(),
+    subject: String(todo.subject || "").trim(),
+    task: String(todo.task || "").trim(),
+    createdAt: now
+  };
+  if (!clean.dueDate || !clean.task) throw new Error("dueDate and task are required");
+  const ref = db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]);
+  const snap = await ref.get();
+  const current = Array.isArray(snap.data()?.todos) ? snap.data().todos : [];
+  await ref.set({ todos: [...current, clean], updatedAt: now }, { merge: true });
+  return listPlans();
+}
+
+async function deleteTodo(todoId) {
+  const now = new Date().toISOString();
+  const ref = db.collection(CONFIG_REF[0]).doc(CONFIG_REF[1]);
+  const snap = await ref.get();
+  const current = Array.isArray(snap.data()?.todos) ? snap.data().todos : [];
+  await ref.set({ todos: current.filter((t) => t.id !== String(todoId)), updatedAt: now }, { merge: true });
+  return listPlans();
+}
+
 module.exports = {
   createPlan,
   listPlans,
@@ -265,5 +293,7 @@ module.exports = {
   deleteTask,
   addTask,
   updateSettings,
+  addTodo,
+  deleteTodo,
   DEFAULT_SETTINGS
 };

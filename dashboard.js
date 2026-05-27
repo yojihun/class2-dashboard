@@ -91,11 +91,14 @@ function buildStateSignature(state) {
     .map((task) => `${task.id}:${task.dayIndex}:${task.homeroom ? 1 : 0}:${task.text}`)
     .join("|");
 
+  const todoSignature = (state.todos || []).map((t) => `${t.id}:${t.dueDate}`).join("|");
+
   return JSON.stringify({
     activePlanId: state.activePlanId || "",
     publishedPlanId: state.publishedPlanId || "",
     settings: state.settings || {},
-    taskSignature
+    taskSignature,
+    todoSignature
   });
 }
 
@@ -122,10 +125,11 @@ async function loadState() {
       plans: Array.isArray(parsed.plans) ? parsed.plans : [],
       activePlanId: parsed.activePlanId || null,
       publishedPlanId: parsed.publishedPlanId || null,
-      settings: mergeSettings(parsed.settings)
+      settings: mergeSettings(parsed.settings),
+      todos: Array.isArray(parsed.todos) ? parsed.todos : []
     };
   } catch {
-    return { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
+    return { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings, todos: [] };
   }
 }
 
@@ -189,6 +193,10 @@ function shortName(name) {
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+}
+
+function isoDate(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function renderLive() {
@@ -436,18 +444,27 @@ function renderSchedule() {
   const plan = resolveDashboardPlan(dashboardState);
   const today = getKoreaToday().getDay();
   const homeroomTasks = plan ? plan.tasks.filter((t) => t.homeroom) : [];
+  const todos = dashboardState.todos || [];
   const board = document.querySelector("#schedule-board");
+  const weekStart = inferPlanWeekStart(plan);
 
   board.innerHTML = [1, 2, 3, 4, 5].map((dayIndex) => {
     const tasks = homeroomTasks.filter((task) => task.dayIndex === dayIndex);
     const rows = tasks.length ? tasks : (!plan && dayIndex === today ? fallbackSchedules[today] || [] : []);
     const isToday = dayIndex === today;
-    const empty = !rows.length;
+    const dayDate = addDays(weekStart, dayIndex - 1);
+    const dayTodos = todos.filter((todo) => todo.dueDate === isoDate(dayDate));
+    const empty = !rows.length && !dayTodos.length;
 
     return `
       <section class="schedule-day ${isToday ? "is-today" : ""}">
-        <div class="schedule-day-head"><span>${formatScheduleDayLabel(plan, dayIndex)}</span><strong>${rows.length}</strong></div>
+        <div class="schedule-day-head"><span>${formatScheduleDayLabel(plan, dayIndex)}</span><strong>${rows.length + dayTodos.length}</strong></div>
         <ul>
+          ${dayTodos.map((todo) => `
+            <li class="todo-item">
+              ${todo.period ? `<span>${escapeHtml(todo.period)}교시</span>` : ""}
+              <strong>${escapeHtml((todo.subject ? `[${todo.subject}] ` : "") + todo.task)}</strong>
+            </li>`).join("")}
           ${empty ? `<li class="empty-day">추가 일정 없음</li>` : rows.map((task) => {
             const text = Array.isArray(task) ? task[1] : task.text;
             const time = Array.isArray(task) ? task[0] : "";
@@ -478,14 +495,33 @@ function renderDutyAndCleaning() {
   document.querySelector("#duty-card").innerHTML = `<p class="duty-label">이번 주 주번</p><div class="duty-pair">${pair.map((name) => `<span>${shortName(name)}</span>`).join("")}</div><p>다음 주: ${nextPair.map(shortName).join(", ")}</p>`;
 
   const today = getKoreaToday();
-  const cleanAnchor = new Date("2026-05-11T00:00:00+09:00");
-  const cycle = Math.max(0, Math.floor((startOfWeek(today) - startOfWeek(cleanAnchor)) / (14 * 24 * 60 * 60 * 1000)));
-  const start = addDays(cleanAnchor, cycle * 14);
-  const end = addDays(start, 14);
-  document.querySelector("#cleaning-period").textContent = `${formatMonthDay(start)} - ${formatMonthDay(end)}`;
+  const cleaningPeriods = [
+    { start: new Date("2026-05-28T00:00:00+09:00"), end: new Date("2026-06-05T00:00:00+09:00") },
+    { start: new Date("2026-06-08T00:00:00+09:00"), end: new Date("2026-06-19T00:00:00+09:00") },
+  ];
+  const lastPeriod = cleaningPeriods[cleaningPeriods.length - 1];
+  let cycle, periodStart, periodEnd;
+  if (today < cleaningPeriods[0].start) {
+    cycle = 0; periodStart = cleaningPeriods[0].start; periodEnd = cleaningPeriods[0].end;
+  } else {
+    cycle = cleaningPeriods.length - 1;
+    periodStart = lastPeriod.start; periodEnd = lastPeriod.end;
+    for (let i = 0; i < cleaningPeriods.length - 1; i++) {
+      if (today < cleaningPeriods[i + 1].start) {
+        cycle = i; periodStart = cleaningPeriods[i].start; periodEnd = cleaningPeriods[i].end; break;
+      }
+    }
+    const extra = Math.floor((today - lastPeriod.start) / (14 * 24 * 60 * 60 * 1000));
+    if (extra > 0) {
+      cycle = cleaningPeriods.length - 1 + extra;
+      periodStart = addDays(lastPeriod.start, extra * 14);
+      periodEnd = addDays(periodStart, 14);
+    }
+  }
+  document.querySelector("#cleaning-period").textContent = `${formatMonthDay(periodStart)} - ${formatMonthDay(periodEnd)}`;
   document.querySelector("#cleaning-grid").innerHTML = cleaningAssignments
     .map((name, idx) => {
-      const studentIndex = (idx - cycle * 3 + students.length * 10) % students.length;
+      const studentIndex = (idx - cycle * 3 + students.length * 100) % students.length;
       return `<div class="assignment"><strong>${name}</strong><span>${shortName(students[studentIndex])}</span></div>`;
     })
     .join("");

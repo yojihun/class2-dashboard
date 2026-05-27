@@ -49,8 +49,12 @@ const defaultSettings = {
   ]
 };
 
-let state = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings };
+let state = { plans: [], activePlanId: null, publishedPlanId: null, settings: defaultSettings, todos: [] };
 let dirty = false;
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
+}
 
 function mergeSettings(settings = {}) {
   return {
@@ -80,6 +84,7 @@ async function loadStateFromServer() {
   status.textContent = "Firestore에서 주간 계획을 불러오는 중입니다...";
   state = await apiRequest("/api/plans", { cache: "no-store" });
   state.settings = mergeSettings(state.settings);
+  state.todos = Array.isArray(state.todos) ? state.todos : [];
   dirty = false;
   renderSettingsForm();
   renderManager();
@@ -607,6 +612,84 @@ function renderManager() {
   });
 
   renderPublishedLabel();
+  renderTodos();
+}
+
+function renderTodos() {
+  const list = document.querySelector("#todo-list");
+  if (!list) return;
+  const todos = state.todos || [];
+  if (!todos.length) {
+    list.innerHTML = '<p class="empty-day">등록된 할일이 없습니다.</p>';
+    return;
+  }
+  list.innerHTML = todos
+    .slice()
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+    .map((todo) => `
+      <div class="todo-row">
+        <span class="todo-date">${escapeHtml(todo.dueDate)}</span>
+        ${todo.period ? `<span class="badge">${escapeHtml(todo.period)}교시</span>` : ""}
+        ${todo.subject ? `<span class="badge muted">${escapeHtml(todo.subject)}</span>` : ""}
+        <span class="todo-task">${escapeHtml(todo.task)}</span>
+        <button class="task-delete-btn" data-todo-id="${escapeHtml(todo.id)}" title="삭제">×</button>
+      </div>`)
+    .join("");
+  list.querySelectorAll(".task-delete-btn[data-todo-id]").forEach((btn) => {
+    btn.addEventListener("click", (e) => removeTodo(e.currentTarget.dataset.todoId));
+  });
+}
+
+async function addTodoItem() {
+  const dateInput = document.querySelector("#todo-date-input");
+  const periodInput = document.querySelector("#todo-period-input");
+  const subjectInput = document.querySelector("#todo-subject-input");
+  const taskInput = document.querySelector("#todo-task-input");
+  const status = document.querySelector("#todo-status");
+
+  const dueDate = dateInput.value;
+  const period = periodInput.value;
+  const subject = subjectInput.value.trim();
+  const task = taskInput.value.trim();
+
+  if (!dueDate || !task) {
+    status.textContent = "날짜와 할일 내용은 필수입니다.";
+    return;
+  }
+
+  try {
+    status.textContent = "저장 중...";
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "addTodo", todo: { id: crypto.randomUUID(), dueDate, period, subject, task } })
+    });
+    state.settings = mergeSettings(state.settings);
+    state.todos = Array.isArray(state.todos) ? state.todos : [];
+    taskInput.value = "";
+    subjectInput.value = "";
+    periodInput.value = "";
+    renderTodos();
+    status.textContent = "할일이 추가되었습니다.";
+  } catch (error) {
+    status.textContent = `추가 실패: ${error.message}`;
+  }
+}
+
+async function removeTodo(todoId) {
+  if (!confirm("이 할일을 삭제하시겠습니까?")) return;
+  const status = document.querySelector("#todo-status");
+  try {
+    state = await apiRequest("/api/plans", {
+      method: "PATCH",
+      body: JSON.stringify({ action: "deleteTodo", todoId })
+    });
+    state.settings = mergeSettings(state.settings);
+    state.todos = Array.isArray(state.todos) ? state.todos : [];
+    renderTodos();
+    status.textContent = "삭제되었습니다.";
+  } catch (error) {
+    status.textContent = `삭제 실패: ${error.message}`;
+  }
 }
 
 async function editTaskText(taskId, text) {
@@ -674,6 +757,7 @@ function bindEvents() {
   document.querySelector("#plan-select").addEventListener("change", (e) => setActivePlan(e.target.value));
   document.querySelector("#save-plan-btn").addEventListener("click", savePublishedPlan);
   document.querySelector("#save-settings-btn").addEventListener("click", saveDashboardSettings);
+  document.querySelector("#add-todo-btn").addEventListener("click", addTodoItem);
 }
 
 function unlockManager() {

@@ -68,6 +68,30 @@
           <div id="plan-status" class="plan-status">아직 업로드된 주간 업무가 없습니다.</div>
           <div id="plan-tasks" class="plan-tasks compact-plan-tasks"></div>
         </article>
+
+        <article class="panel manager-panel manager-panel-full">
+          <div class="section-title"><div><p class="section-kicker">Homework / Tasks</p><h2>할일 (To-Do)</h2></div></div>
+          <div class="settings-grid todo-form-grid">
+            <label>마감 날짜<input id="todo-date-input" type="date"></label>
+            <label>교시<select id="todo-period-input">
+              <option value="">교시 없음</option>
+              <option value="1">1교시</option>
+              <option value="2">2교시</option>
+              <option value="3">3교시</option>
+              <option value="4">4교시</option>
+              <option value="5">5교시</option>
+              <option value="6">6교시</option>
+              <option value="7">7교시</option>
+            </select></label>
+            <label>과목명<input id="todo-subject-input" type="text" placeholder="예: 수학"></label>
+            <label>할일 내용 / 과제명<input id="todo-task-input" type="text" placeholder="예: p.35 문제 1-5번 풀기"></label>
+          </div>
+          <div class="manager-actions compact-actions">
+            <button id="add-todo-btn" type="button">할일 추가</button>
+            <span id="todo-status"></span>
+          </div>
+          <div id="todo-list" class="todo-list"></div>
+        </article>
       </section>
     </main>
 

@@ -1749,6 +1749,20 @@ body.manager-locked footer {
   line-height: 1.2;
 }
 
+.schedule-day li.todo-item {
+  border-color: rgba(255, 209, 102, 0.45);
+  background: rgba(255, 209, 102, 0.09);
+}
+
+.schedule-day.is-today li.todo-item {
+  border-color: rgba(255, 209, 102, 0.65);
+  background: rgba(255, 209, 102, 0.16);
+}
+
+.schedule-day li.todo-item span {
+  color: var(--amber);
+}
+
 .duty-cleaning-layout {
   min-height: 0;
   flex: 1;
@@ -2187,6 +2201,10 @@ body.manager-locked footer {
   gap: 14px;
 }
 
+.manager-panel-full {
+  grid-column: 1 / -1;
+}
+
 .settings-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2207,6 +2225,7 @@ body.manager-locked footer {
 }
 
 .settings-grid input,
+.settings-grid select,
 .settings-grid textarea,
 .manager-head.slim input,
 .manager-head.slim select {
@@ -2236,6 +2255,40 @@ body.manager-locked footer {
   margin-bottom: 0;
 }
 
+.todo-form-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.todo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 209, 102, 0.06);
+}
+
+.todo-date {
+  color: var(--amber);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.todo-task {
+  flex: 1;
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
 .compact-plan-tasks {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   max-height: 58vh;
@@ -2252,6 +2305,10 @@ body.management-screen .hero.management-hero {
     grid-template-columns: 1fr;
   }
 
+  .todo-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .compact-plan-tasks {
     max-height: none;
   }
@@ -2264,6 +2321,7 @@ body.management-screen .hero.management-hero {
   }
 
   .settings-grid,
+  .todo-form-grid,
   .manager-head.slim,
   .compact-plan-tasks {
     grid-template-columns: 1fr;
