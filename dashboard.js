@@ -196,6 +196,17 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
 }
 
+function renderMarkdown(text) {
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/__(.+?)__/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/_(.+?)_/g, "<em>$1</em>")
+    .replace(/~~(.+?)~~/g, "<s>$1</s>")
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/\n/g, "<br>");
+}
+
 function isoDate(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -434,7 +445,7 @@ function renderNowPanel() {
 function renderSettings() {
   const { teacher, messages, quickLinks } = dashboardState.settings;
   document.querySelector("#teacher-message-title").textContent = messages.teacherTitle;
-  document.querySelector("#teacher-message-body").textContent = messages.teacherBody;
+  document.querySelector("#teacher-message-body").innerHTML = renderMarkdown(messages.teacherBody);
   document.querySelector("#daily-quote").textContent = messages.quote;
   document.querySelector("#teacher-name").textContent = teacher.name;
   document.querySelector("#teacher-subject").textContent = teacher.subject || "-";
