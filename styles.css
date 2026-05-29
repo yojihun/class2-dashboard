@@ -1216,9 +1216,9 @@ body.manager-locked footer {
   width: 100%;
   min-height: 50px;
   display: grid;
-  grid-template-columns: minmax(260px, 1.45fr) auto auto auto minmax(360px, 1fr);
+  grid-template-columns: auto auto auto auto minmax(0, 1fr);
   align-items: center;
-  column-gap: clamp(18px, 3vw, 46px);
+  column-gap: clamp(10px, 1.8vw, 32px);
   row-gap: 6px;
   border: 1px solid var(--hairline-strong);
   border-radius: var(--radius-sm);
@@ -1438,8 +1438,13 @@ body.manager-locked footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 18px;
-  overflow: hidden;
+  gap: clamp(8px, 1.2vw, 18px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.daily-timetable-board::-webkit-scrollbar {
+  display: none;
 }
 
 .daily-period {
@@ -1964,6 +1969,26 @@ body.manager-locked footer {
 
   body.tv-screen footer {
     display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .info-label {
+    display: none;
+  }
+
+  #school-day {
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  #school-day::before {
+    content: attr(data-short);
+    font-size: 0.9rem;
+    font-weight: 820;
+    color: var(--amber);
+    font-family: var(--font-mono);
+    letter-spacing: normal;
   }
 }
 

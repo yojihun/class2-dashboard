@@ -205,7 +205,10 @@ function renderLive() {
   const dateEl = document.querySelector("#live-date");
   const dayEl = document.querySelector("#school-day");
   if (dateEl) dateEl.textContent = today.toLocaleDateString("ko-KR", { timeZone: "Asia/Seoul" });
-  if (dayEl) dayEl.textContent = `${DAY_NAMES[today.getDay()]}요일`;
+  if (dayEl) {
+    dayEl.textContent = `${DAY_NAMES[today.getDay()]}요일`;
+    dayEl.dataset.short = DAY_NAMES[today.getDay()];
+  }
 }
 
 function parseGvizResponse(text) {
