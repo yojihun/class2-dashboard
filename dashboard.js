@@ -4,6 +4,7 @@ const VIEW_ORDER = ["schedule", "duties", "roles", "seating"];
 
 const students = ["고성민", "고희경", "권율", "김규리", "김선민", "박지성", "변지현", "여서정", "유리한", "윤규태", "이윤재", "이현민", "전효민", "조예지", "최승우", "최영민", "한병민", "황수미"];
 const cleaningAssignments = ["쓸기1", "쓸기2", "쓸기3", "바닦1", "바닦2", "휴지통1", "휴지통2", "닦기1", "닦기2", "닦기3", "닦기4", "교탁정리", "꿈담카페1", "꿈담카페2", "꿈담카페3", "2-2계단1", "2-2계단2", "2-2계단3"];
+const CLEANING_BASE_START_NAME = "최영민";
 const defaultRoles = [
   ["고민상담/연애상담", "최승우"],
   ["급식알리미", "전효민"],
@@ -556,9 +557,10 @@ function renderDutyAndCleaning() {
     }
   }
   document.querySelector("#cleaning-period").textContent = `${formatMonthDay(periodStart)} - ${formatMonthDay(periodEnd)}`;
+  const baseStartIndex = Math.max(0, students.indexOf(CLEANING_BASE_START_NAME));
   document.querySelector("#cleaning-grid").innerHTML = cleaningAssignments
     .map((name, idx) => {
-      const studentIndex = (idx - cycle * 3 + students.length * 100) % students.length;
+      const studentIndex = (idx + baseStartIndex - cycle * 3 + students.length * 100) % students.length;
       return `<div class="assignment"><strong>${name}</strong><span>${shortName(students[studentIndex])}</span></div>`;
     })
     .join("");
