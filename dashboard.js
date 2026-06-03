@@ -197,8 +197,26 @@ function escapeHtml(value) {
   return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[char]);
 }
 
-function renderMarkdown(text) {
-  return escapeHtml(text)
+function normalizeRenderedMarkdown(html) {
+  return String(html || "")
+    .replace(/<a /g, '<a target="_blank" rel="noreferrer" ')
+    .replace(/<p>([\s\S]*?)<\/p>/g, "<p>$1</p>");
+}
+
+function renderMarkdown(text, { inline = false } = {}) {
+  const source = String(text || "");
+  if (window.marked && window.DOMPurify) {
+    const rawHtml = inline
+      ? window.marked.parseInline(source, { breaks: true, gfm: true })
+      : window.marked.parse(source, { breaks: true, gfm: true });
+    const cleanHtml = window.DOMPurify.sanitize(rawHtml, {
+      USE_PROFILES: { html: true },
+      ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+    });
+    return normalizeRenderedMarkdown(cleanHtml);
+  }
+
+  return escapeHtml(source)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/__(.+?)__/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
@@ -445,9 +463,9 @@ function renderNowPanel() {
 
 function renderSettings() {
   const { teacher, messages, quickLinks } = dashboardState.settings;
-  document.querySelector("#teacher-message-title").textContent = messages.teacherTitle;
+  document.querySelector("#teacher-message-title").innerHTML = renderMarkdown(messages.teacherTitle, { inline: true });
   document.querySelector("#teacher-message-body").innerHTML = renderMarkdown(messages.teacherBody);
-  document.querySelector("#daily-quote").textContent = messages.quote;
+  document.querySelector("#daily-quote").innerHTML = renderMarkdown(messages.quote);
   document.querySelector("#teacher-name").textContent = teacher.name;
   document.querySelector("#teacher-subject").textContent = teacher.subject || "-";
   document.querySelector("#teacher-office").textContent = teacher.office || "-";
